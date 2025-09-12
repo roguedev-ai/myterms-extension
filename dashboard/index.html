@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyTerms Consent Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <div class="logo-icon">🛡️</div>
+                    <h1>MyTerms</h1>
+                </div>
+                <div class="subtitle">Privacy Consent Ledger Dashboard</div>
+            </div>
+            <div class="wallet-status" id="walletStatus">
+                <button class="connect-btn" id="connectButton">
+                    🔗 Connect Wallet
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Stats Cards -->
+            <section class="stats-section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">📊</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="totalConsents">--</div>
+                            <div class="stat-label">Total Consents</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🌐</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="sitesCount">--</div>
+                            <div class="stat-label">Sites Tracked</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">⛓️</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="transactionsCount">--</div>
+                            <div class="stat-label">Transactions</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">🔒</div>
+                        <div class="stat-info">
+                            <div class="stat-value" id="privacyScore">--</div>
+                            <div class="stat-label">Privacy Score</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Filters and Controls -->
+            <section class="controls-section">
+                <div class="controls-bar">
+                    <div class="filter-controls">
+                        <select id="networkSelect">
+                            <option value="sepolia">Sepolia Testnet</option>
+                            <option value="mainnet">Ethereum Mainnet</option>
+                        </select>
+                        <button class="refresh-btn" id="refreshButton">
+                            🔄 Refresh
+                        </button>
+                    </div>
+                    <div class="view-controls">
+                        <button class="view-btn active" data-view="timeline">📅 Timeline</button>
+                        <button class="view-btn" data-view="sites">🌐 Sites</button>
+                        <button class="view-btn" data-view="analytics">📈 Analytics</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Timeline View -->
+            <section class="timeline-section" id="timelineView">
+                <div class="timeline-header">
+                    <h2>Consent Timeline</h2>
+                    <div class="timeline-filter">
+                        <select id="timeFilter">
+                            <option value="all">All Time</option>
+                            <option value="month">Last Month</option>
+                            <option value="week">Last Week</option>
+                            <option value="day">Last Day</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="timeline-container" id="timelineContainer">
+                    <div class="no-data" id="noDataMessage">
+                        <div class="no-data-icon">📋</div>
+                        <h3>No Consents Found</h3>
+                        <p>Connect your wallet to view your consent history, or try refreshing the data.</p>
+                        <button class="refresh-btn" id="retryButton">🔄 Retry</button>
+                    </div>
+                </div>
+
+                <div class="timeline-timeline" id="timelineTimeline"></div>
+                <div class="load-more-container">
+                    <button class="load-more-btn" id="loadMoreButton">Load More Events</button>
+                </div>
+            </section>
+
+            <!-- Sites View -->
+            <section class="sites-section hidden" id="sitesView">
+                <h2>Sites Overview</h2>
+                <div class="sites-grid" id="sitesGrid">
+                    <!-- Sites will be populated here -->
+                </div>
+            </section>
+
+            <!-- Analytics View -->
+            <section class="analytics-section hidden" id="analyticsView">
+                <h2>Privacy Analytics</h2>
+                <div class="analytics-grid" id="analyticsGrid">
+                    <div class="chart-container">
+                        <h3>Consent Decisions Over Time</h3>
+                        <canvas id="decisionsChart"></canvas>
+                    </div>
+                    <div class="chart-container">
+                        <h3>Top Websites by Consent Frequency</h3>
+                        <canvas id="sitesChart"></canvas>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Loading Overlay -->
+        <div class="loading-overlay" id="loadingOverlay">
+            <div class="loading-spinner">
+                <div class="spinner"></div>
+                <p id="loadingText">Connecting to blockchain...</p>
+            </div>
+        </div>
+
+        <!-- Error Modal -->
+        <div class="modal-overlay hidden" id="errorModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>Error</h3>
+                    <button class="modal-close" id="errorModalClose">✕</button>
+                </div>
+                <div class="modal-body">
+                    <p id="errorMessage">An error occurred while loading data.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyTerms Extension</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            width: 300px;
+            min-height: 200px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .stats {
+            display: grid;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-title {
+            font-size: 12px;
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .stat-subtitle {
+            font-size: 10px;
+            opacity: 0.6;
+            margin-top: 2px;
+        }
+
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 12px;
+        }
+
+        .status.connected {
+            background: rgba(34, 197, 94, 0.2);
+            color: #e6f7e6;
+        }
+
+        .status.disconnected {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fecaca;
+        }
+
+        .status.processing {
+            background: rgba(251, 191, 36, 0.2);
+            color: #fef3c7;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .transaction-link {
+            font-size: 11px;
+            word-break: break-all;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 8px;
+            border-radius: 6px;
+            margin-top: 5px;
+            font-family: monospace;
+        }
+
+        .transaction-link a {
+            color: #e0e7ff;
+            text-decoration: none;
+        }
+
+        .transaction-link a:hover {
+            text-decoration: underline;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #fecaca;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>MyTerms</h1>
+            <p>Privacy Consent Manager</p>
+        </div>
+
+        <div class="status" id="walletStatus">
+            <div class="loading"></div>
+            <span>Connecting to wallet...</span>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-title">Queued Consents</div>
+                <div class="stat-value" id="queuedCount">0</div>
+                <div class="stat-subtitle">Pending blockchain submission</div>
+            </div>
+
+            <div class="stat-card" id="batchCard" style="display: none;">
+                <div class="stat-title">Last Batch</div>
+                <div class="stat-value">—</div>
+                <div class="stat-subtitle" id="batchDate">No transactions yet</div>
+                <div class="transaction-link" id="txLink" style="display: none;">
+                    <a href="#" id="txHashLink" target="_blank">View Transaction</a>
+                </div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-title">Total Batches</div>
+                <div class="stat-value" id="totalBatches">0</div>
+                <div class="stat-subtitle">Submitted to blockchain</div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-primary" id="forceBatchBtn">
+                Force Batch Submit
+            </button>
+            <button class="btn btn-secondary" id="settingsBtn">
+                Settings
+            </button>
+        </div>
+
+        <div id="errorMessage" class="error hidden">
+            Error loading extension data
+        </div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
