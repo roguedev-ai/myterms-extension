@@ -1,72 +1,70 @@
-// Ethers.js utility for MyTerms blockchain interactions
-// Handles MetaMask connection, contract interaction, and transaction signing
+// Enhanced Ethers.js utility for MyTerms blockchain interactions
+// Supports multiple wallets: MetaMask, WalletConnect, Trust Wallet, etc.
 
 import { ethers } from 'ethers';
+import { walletManager } from './wallet-manager.js';
 
 class MyTermsEthers {
   constructor() {
-    this.provider = null;
-    this.signer = null;
     this.contract = null;
-    this.account = null;
     this.contractAddress = null;
     this.contractABI = null;
 
+    // Initialize multi-wallet support
     this.initialize();
   }
 
+  // Initialize with multi-wallet support
   async initialize() {
-    await this.connectWallet();
+    console.log('MyTermsEthers: Initializing with multi-wallet support...');
+
+    // Wait for wallet manager to initialize
+    await walletManager.init();
     await this.loadContractConfig();
     await this.initializeContract();
   }
 
-  // Connect to MetaMask wallet
-  async connectWallet() {
+  // Connect to specific wallet type
+  async connectWallet(walletType, options = {}) {
     try {
-      // Check if MetaMask is installed
-      if (typeof window === 'undefined' || !window.ethereum) {
-        throw new Error('MetaMask not detected. Please install MetaMask to use this extension.');
-      }
-
-      // Request account access
-      const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts'
-      });
-
-      if (accounts.length === 0) {
-        throw new Error('No accounts connected. Please connect your MetaMask wallet.');
-      }
-
-      // Create ethers provider and signer
-      this.provider = new ethers.BrowserProvider(window.ethereum);
-      this.signer = await this.provider.getSigner();
-      this.account = accounts[0];
-
-      console.log('Connected to MetaMask:', this.account);
-
-      // Listen for account changes
-      window.ethereum.on('accountsChanged', (accounts) => {
-        if (accounts.length > 0) {
-          this.account = accounts[0];
-          console.log('Account changed:', this.account);
-        } else {
-          this.account = null;
-          this.signer = null;
-          console.log('MetaMask disconnected');
-        }
-      });
-
-      // Listen for network changes
-      window.ethereum.on('chainChanged', () => {
-        this.reinitialize();
-      });
-
-      return this.account;
+      const walletInfo = await walletManager.connectWallet(walletType, options);
+      await this.handleWalletConnected(walletInfo);
+      return walletInfo.account;
     } catch (error) {
       console.error('Failed to connect wallet:', error);
       throw error;
     }
+  }
+
+  // Handle wallet connection event
+  async handleWalletConnected(walletInfo) {
+    console.log('Wallet connected for contract interactions:', walletInfo.type);
+    // Update contract with new provider/signer
+    if (walletInfo.provider && walletInfo.signer) {
+      await this.initializeContract();
+    }
+  }
+
+  // Disconnect current wallet
+  disconnectWallet() {
+    walletManager.disconnectWallet();
+    this.contract = null;
+  }
+
+  // Get current wallet info
+  getConnectedWallet() {
+    return walletManager.getConnectedWallet();
+  }
+
+  // Get available wallet types
+  getAvailableWallets() {
+    return walletManager.getWalletAvailability();
+  }
+
+  // Is wallet connected and ready?
+  isReady() {
+    const wallet = this.getConnectedWallet();
+    return wallet && wallet.signer && wallet.account && this.contract;
   }
 
   // Load contract configuration
@@ -109,7 +107,14 @@ class MyTermsEthers {
   // Load configuration from remote source
   async loadRemoteConfig() {
     try {
-      const network = await this.getNetworkName();
+      // Get current network from connected wallet
+      const wallet = this.getConnectedWallet();
+      let network = 'sepolia'; // Default
+
+      if (wallet && wallet.network) {
+        network = wallet.network.name;
+      }
+
       const networks = {
         'sepolia': {
           address: process.env.SEPOLIA_CONTRACT_ADDRESS || '0x...', // Replace with actual deployed address
@@ -148,7 +153,6 @@ class MyTermsEthers {
           ]
         },
         'mainnet': {
-          // Add mainnet configuration
           address: '0x...',
           abi: []
         }
@@ -169,8 +173,10 @@ class MyTermsEthers {
 
   // Initialize contract instance
   async initializeContract() {
-    if (!this.contractAddress || !this.contractABI || !this.signer) {
-      console.warn('Cannot initialize contract: missing configuration or signer');
+    const wallet = this.getConnectedWallet();
+
+    if (!this.contractAddress || !this.contractABI || !wallet || !wallet.signer) {
+      console.warn('Cannot initialize contract: missing wallet, configuration, or signer');
       return null;
     }
 
@@ -178,7 +184,7 @@ class MyTermsEthers {
       this.contract = new ethers.Contract(
         this.contractAddress,
         this.contractABI,
-        this.signer
+        wallet.signer
       );
 
       console.log('Contract initialized successfully');
@@ -189,24 +195,14 @@ class MyTermsEthers {
     }
   }
 
-  // Reinitialize after network change
-  async reinitialize() {
-    try {
-      await this.loadContractConfig();
-      await this.initializeContract();
-      console.log('Reinitialized for new network');
-    } catch (error) {
-      console.error('Failed to reinitialize:', error);
-      throw error;
-    }
-  }
-
-  // Get current network name
+  // Get current network name from connected wallet
   async getNetworkName() {
-    if (!this.provider) return 'unknown';
+    const wallet = this.getConnectedWallet();
+
+    if (!wallet || !wallet.provider) return 'unknown';
 
     try {
-      const network = await this.provider.getNetwork();
+      const network = await wallet.provider.getNetwork();
       const chainId = network.chainId;
 
       const networks = {
@@ -222,11 +218,6 @@ class MyTermsEthers {
       console.error('Failed to get network:', error);
       return 'unknown';
     }
-  }
-
-  // Check if wallet is ready for transactions
-  isReady() {
-    return !!(this.contract && this.signer && this.account);
   }
 
   // Submit consent batch to blockchain
@@ -310,8 +301,10 @@ class MyTermsEthers {
 
   // Generate hash from terms content (SHA-256)
   async generateTermsHash(termsContent) {
-    if (!this.provider) {
-      throw new Error('Provider not initialized');
+    const wallet = this.getConnectedWallet();
+
+    if (!wallet || !wallet.provider) {
+      throw new Error('Wallet not connected - provider not available');
     }
 
     try {
@@ -362,11 +355,13 @@ class MyTermsEthers {
 
   // Get current gas price
   async getGasPrice() {
-    if (!this.provider) return null;
+    const wallet = this.getConnectedWallet();
+
+    if (!wallet || !wallet.provider) return null;
 
     try {
-      const gasPrice = await this.provider.getFeeData();
-      return gasPrice;
+      const feeData = await wallet.provider.getFeeData();
+      return feeData;
     } catch (error) {
       console.error('Failed to get gas price:', error);
       return null;
@@ -375,24 +370,17 @@ class MyTermsEthers {
 
   // Get user's ETH balance
   async getBalance() {
-    if (!this.account || !this.provider) return null;
+    const wallet = this.getConnectedWallet();
+
+    if (!wallet || !wallet.account || !wallet.provider) return null;
 
     try {
-      const balance = await this.provider.getBalance(this.account);
+      const balance = await wallet.provider.getBalance(wallet.account);
       return ethers.formatEther(balance);
     } catch (error) {
       console.error('Failed to get balance:', error);
       return null;
     }
-  }
-
-  // Disconnect wallet (clear state)
-  disconnect() {
-    this.provider = null;
-    this.signer = null;
-    this.contract = null;
-    this.account = null;
-    console.log('Wallet disconnected');
   }
 
   // Update contract configuration
@@ -423,13 +411,13 @@ class MyTermsEthers {
   }
 }
 
-// Global instance
+// Create global instance
 const myTermsEthers = new MyTermsEthers();
 
-// Export for use in background and popup scripts
+// Export for use in other modules
 export { myTermsEthers };
 
-// For background script usage
+// Make available globally for background script
 if (typeof chrome !== 'undefined' && chrome.runtime) {
   window.myTermsEthers = myTermsEthers;
 }
