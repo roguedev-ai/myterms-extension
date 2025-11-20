@@ -135,7 +135,8 @@ class EnhancedBannerDetector {
   isCookieBanner(element) {
     // Get element properties
     const textContent = element.textContent?.toLowerCase() || '';
-    const className = element.className?.toLowerCase() || '';
+    // Handle both regular elements (string) and SVG elements (SVGAnimatedString)
+    const className = (typeof element.className === 'string' ? element.className : element.className?.baseVal || '').toLowerCase();
     const id = element.id?.toLowerCase() || '';
     const tagName = element.tagName?.toLowerCase() || '';
 
