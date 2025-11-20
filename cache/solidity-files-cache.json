@@ -1,0 +1,41 @@
+{
+  "_format": "hh-sol-cache-2",
+  "files": {
+    "/home/jaymes/projects/myterms-extension/contracts/MyTermsConsentLedger.sol": {
+      "lastModificationDate": 1763592498146,
+      "contentHash": "56c7e438c8e996c7405c376b0991966c",
+      "sourceName": "contracts/MyTermsConsentLedger.sol",
+      "solcConfig": {
+        "version": "0.8.20",
+        "settings": {
+          "evmVersion": "paris",
+          "optimizer": {
+            "enabled": false,
+            "runs": 200
+          },
+          "outputSelection": {
+            "*": {
+              "*": [
+                "abi",
+                "evm.bytecode",
+                "evm.deployedBytecode",
+                "evm.methodIdentifiers",
+                "metadata"
+              ],
+              "": [
+                "ast"
+              ]
+            }
+          }
+        }
+      },
+      "imports": [],
+      "versionPragmas": [
+        "^0.8.20"
+      ],
+      "artifacts": [
+        "MyTermsConsentLedger"
+      ]
+    }
+  }
+}

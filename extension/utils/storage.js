@@ -421,5 +421,9 @@ export { consentStorage };
 // For background script usage
 if (typeof chrome !== 'undefined' && chrome.runtime) {
   // Make available globally in background script
-  window.consentStorage = consentStorage;
+  if (typeof window !== 'undefined') {
+    window.consentStorage = consentStorage;
+  } else if (typeof self !== 'undefined') {
+    self.consentStorage = consentStorage;
+  }
 }

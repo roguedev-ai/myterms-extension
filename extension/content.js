@@ -353,10 +353,10 @@ class EnhancedBannerDetector {
     const rect = button.getBoundingClientRect();
 
     return style.display !== 'none' &&
-           style.visibility !== 'hidden' &&
-           style.opacity !== '0' &&
-           rect.width > 0 &&
-           rect.height > 0;
+      style.visibility !== 'hidden' &&
+      style.opacity !== '0' &&
+      rect.width > 0 &&
+      rect.height > 0;
   }
 
   isElementVisible(element) {
@@ -364,18 +364,18 @@ class EnhancedBannerDetector {
     const rect = element.getBoundingClientRect();
 
     return style.display !== 'none' &&
-           style.visibility !== 'hidden' &&
-           style.opacity !== '0' &&
-           rect.width > 20 &&
-           rect.height > 20;
+      style.visibility !== 'hidden' &&
+      style.opacity !== '0' &&
+      rect.width > 20 &&
+      rect.height > 20;
   }
 
   async recordBannerContent(bannerElement) {
     try {
       // Generate hash of the banner content
       const termsHash = await this.generateTermsHash({
-        text: bannerElement.textContent || '',
-        html: bannerElement.innerHTML || ''
+        text: bannerElement.textContent || ''
+        // Removed innerHTML capture to prevent XSS risks and reduce data size
       });
 
       const bannerData = {
@@ -449,6 +449,7 @@ class EnhancedBannerDetector {
     } catch (cryptoError) {
       // Fallback to simple hash if crypto API is unavailable
       console.warn('Crypto API unavailable, using fallback hash');
+      // Note: This fallback is not cryptographically secure and should only be used for non-critical identification
       let hash = 0;
       const contentStr = typeof content === 'object' ? JSON.stringify(content) : content;
       for (let i = 0; i < contentStr.length; i++) {
@@ -456,7 +457,8 @@ class EnhancedBannerDetector {
         hash = ((hash << 5) - hash) + char;
         hash = hash & hash;
       }
-      return '0x' + Math.abs(hash).toString(16).padStart(64, '0');
+      // Prefix with 0x and pad to ensure it looks like a bytes32, but mark it as weak (starts with 0000)
+      return '0x0000' + Math.abs(hash).toString(16).padStart(60, '0');
     }
   }
 

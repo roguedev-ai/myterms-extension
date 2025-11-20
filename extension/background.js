@@ -258,5 +258,9 @@ const consentManager = new ConsentManager();
 
 // For background script usage
 if (typeof chrome !== 'undefined' && chrome.runtime) {
-  window.consentManager = consentManager;
+  if (typeof window !== 'undefined') {
+    window.consentManager = consentManager;
+  } else if (typeof self !== 'undefined') {
+    self.consentManager = consentManager;
+  }
 }

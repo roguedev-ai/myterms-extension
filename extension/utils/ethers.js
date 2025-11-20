@@ -1,7 +1,7 @@
 // Enhanced Ethers.js utility for MyTerms blockchain interactions
 // Supports multiple wallets: MetaMask, WalletConnect, Trust Wallet, etc.
 
-import { ethers } from 'ethers';
+import { ethers } from './ethers-v6.js';
 import { walletManager } from './wallet-manager.js';
 
 class MyTermsEthers {
@@ -18,8 +18,11 @@ class MyTermsEthers {
   async initialize() {
     console.log('MyTermsEthers: Initializing with multi-wallet support...');
 
-    // Wait for wallet manager to initialize
-    await walletManager.init();
+    // Only initialize wallet manager in browser contexts (not service workers)
+    if (typeof window !== 'undefined' && walletManager.init) {
+      await walletManager.init();
+    }
+
     await this.loadContractConfig();
     await this.initializeContract();
   }
@@ -117,12 +120,12 @@ class MyTermsEthers {
 
       const networks = {
         'sepolia': {
-          address: process.env.SEPOLIA_CONTRACT_ADDRESS || '0x...', // Replace with actual deployed address
+          address: '0x...', // Replace with actual deployed address
           abi: [
             {
               "inputs": [
-                {"internalType": "string[]", "name": "sites", "type": "string[]"},
-                {"internalType": "bytes32[]", "name": "hashes", "type": "bytes32[]"}
+                { "internalType": "string[]", "name": "sites", "type": "string[]" },
+                { "internalType": "bytes32[]", "name": "hashes", "type": "bytes32[]" }
               ],
               "name": "logConsentBatch",
               "outputs": [],
@@ -131,8 +134,8 @@ class MyTermsEthers {
             },
             {
               "inputs": [
-                {"internalType": "string", "name": "site", "type": "string"},
-                {"internalType": "bytes32", "name": "termsHash", "type": "bytes32"}
+                { "internalType": "string", "name": "site", "type": "string" },
+                { "internalType": "bytes32", "name": "termsHash", "type": "bytes32" }
               ],
               "name": "logConsent",
               "outputs": [],
@@ -142,10 +145,10 @@ class MyTermsEthers {
             {
               "anonymous": false,
               "inputs": [
-                {"indexed": true, "internalType": "address", "name": "user", "type": "address"},
-                {"indexed": false, "internalType": "string", "name": "siteDomain", "type": "string"},
-                {"indexed": false, "internalType": "bytes32", "name": "termsHash", "type": "bytes32"},
-                {"indexed": false, "internalType": "uint256", "name": "timestamp", "type": "uint256"}
+                { "indexed": true, "internalType": "address", "name": "user", "type": "address" },
+                { "indexed": false, "internalType": "string", "name": "siteDomain", "type": "string" },
+                { "indexed": false, "internalType": "bytes32", "name": "termsHash", "type": "bytes32" },
+                { "indexed": false, "internalType": "uint256", "name": "timestamp", "type": "uint256" }
               ],
               "name": "ConsentLogged",
               "type": "event"
@@ -203,7 +206,7 @@ class MyTermsEthers {
 
     try {
       const network = await wallet.provider.getNetwork();
-      const chainId = network.chainId;
+      const chainId = Number(network.chainId);
 
       const networks = {
         1: 'mainnet',
@@ -419,5 +422,9 @@ export { myTermsEthers };
 
 // Make available globally for background script
 if (typeof chrome !== 'undefined' && chrome.runtime) {
-  window.myTermsEthers = myTermsEthers;
+  if (typeof window !== 'undefined') {
+    window.myTermsEthers = myTermsEthers;
+  } else if (typeof self !== 'undefined') {
+    self.myTermsEthers = myTermsEthers;
+  }
 }

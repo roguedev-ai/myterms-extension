@@ -1,7 +1,7 @@
 // Multi-Wallet Manager for MyTerms extension
 // Supports MetaMask, WalletConnect, Trust Wallet, Coinbase Wallet, and more
 
-import { ethers } from 'ethers';
+import { ethers } from './ethers-v6.js';
 
 // WalletConnect import would be added for full implementation
 // import { Core } from '@walletconnect/v2-core';
@@ -23,8 +23,10 @@ class WalletManager {
     this.onAccountChange = null;
     this.onNetworkChange = null;
 
-    // Initialize wallet detection
-    this.init();
+    // Only initialize wallet detection in browser contexts (not service workers)
+    if (typeof window !== 'undefined') {
+      this.init();
+    }
   }
 
   // Initialize wallet detection and connection
@@ -67,26 +69,26 @@ class WalletManager {
   // Wallet detection helpers
   isMetaMaskInstalled() {
     return typeof window !== 'undefined' &&
-           window.ethereum &&
-           window.ethereum.isMetaMask;
+      window.ethereum &&
+      window.ethereum.isMetaMask;
   }
 
   isTrustWalletInstalled() {
     return typeof window !== 'undefined' &&
-           window.ethereum &&
-           window.ethereum.isTrust;
+      window.ethereum &&
+      window.ethereum.isTrust;
   }
 
   isCoinbaseWalletInstalled() {
     return typeof window !== 'undefined' &&
-           window.ethereum &&
-           window.ethereum.isCoinbaseWallet;
+      window.ethereum &&
+      window.ethereum.isCoinbaseWallet;
   }
 
   isRainbowWalletInstalled() {
     return typeof window !== 'undefined' &&
-           window.ethereum &&
-           (window.ethereum.isRainbow || window.RainbowKit);
+      window.ethereum &&
+      (window.ethereum.isRainbow || window.RainbowKit);
   }
 
   // Get list of available wallets
@@ -259,8 +261,8 @@ class WalletManager {
       // Clear saved preferences
       await this.clearConnectionPreference();
 
-      // Reset provider/signer
-      if (window.ethereum && window.ethereum.disconnect) {
+      // Reset provider/signer (only in browser context)
+      if (typeof window !== 'undefined' && window.ethereum && window.ethereum.disconnect) {
         await window.ethereum.disconnect();
       }
 
@@ -301,36 +303,39 @@ class WalletManager {
 
   // Setup event listeners for wallet changes
   setupEventListeners() {
-    if (window.ethereum) {
-      // Account changes
-      window.ethereum.on('accountsChanged', (accounts) => {
-        if (this.connectedWallet) {
-          this.connectedWallet.account = accounts[0] || null;
-
-          if (this.onAccountChange) {
-            this.onAccountChange(this.connectedWallet.account);
-          }
-        }
-      });
-
-      // Network changes
-      window.ethereum.on('chainChanged', async () => {
-        if (this.connectedWallet && this.connectedWallet.provider) {
-          const network = await this.connectedWallet.provider.getNetwork();
-          this.connectedWallet.network = {
-            name: network.name,
-            chainId: network.chainId
-          };
-
-          if (this.onNetworkChange) {
-            this.onNetworkChange(this.connectedWallet.network);
-          }
-        }
-      });
-
-      // WalletConnect events would be added here
-      // window.ethereum.on('walletconnect_disconnect', ...)
+    if (typeof window === 'undefined' || !window.ethereum) {
+      // Not in a browser context or no ethereum provider
+      return;
     }
+
+    // Account changes
+    window.ethereum.on('accountsChanged', (accounts) => {
+      if (this.connectedWallet) {
+        this.connectedWallet.account = accounts[0] || null;
+
+        if (this.onAccountChange) {
+          this.onAccountChange(this.connectedWallet.account);
+        }
+      }
+    });
+
+    // Network changes
+    window.ethereum.on('chainChanged', async () => {
+      if (this.connectedWallet && this.connectedWallet.provider) {
+        const network = await this.connectedWallet.provider.getNetwork();
+        this.connectedWallet.network = {
+          name: network.name,
+          chainId: network.chainId
+        };
+
+        if (this.onNetworkChange) {
+          this.onNetworkChange(this.connectedWallet.network);
+        }
+      }
+    });
+
+    // WalletConnect events would be added here
+    // window.ethereum.on('walletconnect_disconnect', ...)
   }
 
   // Storage helpers
@@ -454,5 +459,9 @@ export { walletManager };
 
 // Make available globally for background script
 if (typeof chrome !== 'undefined' && chrome.runtime) {
-  window.walletManager = walletManager;
+  if (typeof window !== 'undefined') {
+    window.walletManager = walletManager;
+  } else if (typeof self !== 'undefined') {
+    self.walletManager = walletManager;
+  }
 }
