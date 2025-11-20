@@ -182,9 +182,9 @@ class EnhancedBannerDetector {
     // Attribute-based detection
     if (element.hasAttribute('data-cookie') || element.hasAttribute('data-consent')) score += 5;
 
-    // Require minimum score
-    const isBanner = score >= 8;
-    if (isBanner && score > 5) {
+    // Require minimum score (lowered to catch more banners)
+    const isBanner = score >= 6;
+    if (isBanner && score > 3) {
       console.log(`Banner score: ${score} for element:`, element);
     }
 

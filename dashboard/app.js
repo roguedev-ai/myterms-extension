@@ -66,19 +66,23 @@ class DashboardApp {
     }
 
     async checkWalletConnection() {
+        // Load local data immediately (doesn't require wallet)
+        this.loadData();
+
         // Wait for wallet manager to init
         setTimeout(async () => {
             const wallet = walletManager.getConnectedWallet();
             if (wallet) {
                 this.updateWalletUI(wallet);
+                // Reload data to include blockchain info
                 this.loadData();
             }
         }, 1000);
 
         walletManager.onWalletChange((wallet) => {
             this.updateWalletUI(wallet);
-            if (wallet) this.loadData();
-            else this.clearData();
+            if (wallet) this.loadData(); // Reload with blockchain data
+            else this.clearBlockchainData(); // Keep local data
         });
     }
 
