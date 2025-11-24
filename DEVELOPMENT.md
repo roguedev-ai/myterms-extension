@@ -2,6 +2,17 @@
 
 ## Quick Start
 
+### Local Blockchain Development
+
+**For local blockchain setup with Hardhat, see [LOCAL_BLOCKCHAIN.md](LOCAL_BLOCKCHAIN.md)** ⭐
+
+Quick command:
+```bash
+./dev-start.sh  # Starts Hardhat node, deploys contract, starts server
+```
+
+### Basic Setup
+
 ### 1. Install Dependencies
 ```bash
 npm install

@@ -79,9 +79,12 @@ Connect wallet → view logged consent history.
 
 ## Documentation
 
+- **[README.md](README.md)** - This file (overview and quick start)
+- **[LOCAL_BLOCKCHAIN.md](LOCAL_BLOCKCHAIN.md)** - **⭐ Local blockchain setup with Hardhat**
 - **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development guide and workflows
 - **[TESTING.md](TESTING.md)** - Comprehensive testing guide
-- **[README.md](README.md)** - This file (overview)
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Dual-dashboard architecture
+- **[DASHBOARD_README.md](DASHBOARD_README.md)** - Dashboard server guide
 
 ## Repository Structure
 
