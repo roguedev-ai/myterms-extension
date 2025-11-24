@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -150,7 +151,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .transaction-link {
@@ -187,11 +190,12 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
             <h1>MyTerms</h1>
-            <p>Privacy Consent Manager</p>
+            <p>Consent & Privacy Manager</p>
         </div>
 
         <div class="status" id="walletStatus">
@@ -223,11 +227,11 @@
         </div>
 
         <div class="actions">
-            <button class="btn btn-primary" id="forceBatchBtn">
-                Force Batch Submit
+            <button class="btn btn-primary" id="dashboardBtn">
+                📊 Open Dashboard
             </button>
-            <button class="btn btn-secondary" id="settingsBtn">
-                Settings
+            <button class="btn btn-secondary hidden" id="blockchainDashboardBtn">
+                ⛓️ Blockchain Dashboard
             </button>
         </div>
 
@@ -238,4 +242,5 @@
 
     <script src="popup.js"></script>
 </body>
+
 </html>

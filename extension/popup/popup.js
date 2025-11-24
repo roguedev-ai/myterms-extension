@@ -10,8 +10,8 @@ class PopupManager {
     this.txLink = document.getElementById('txLink');
     this.txHashLink = document.getElementById('txHashLink');
     this.totalBatches = document.getElementById('totalBatches');
-    this.forceBatchBtn = document.getElementById('forceBatchBtn');
-    this.settingsBtn = document.getElementById('settingsBtn');
+    this.dashboardBtn = document.getElementById('dashboardBtn');
+    this.blockchainDashboardBtn = document.getElementById('blockchainDashboardBtn');
     this.errorMessage = document.getElementById('errorMessage');
 
     this.init();
@@ -23,6 +23,9 @@ class PopupManager {
     // Set up event listeners
     this.setupEventListeners();
 
+    // Check blockchain settings
+    await this.checkBlockchainSettings();
+
     // Load data from background script
     await this.loadPopupData();
 
@@ -31,20 +34,42 @@ class PopupManager {
   }
 
   setupEventListeners() {
-    // Force batch submit button
-    this.forceBatchBtn.addEventListener('click', () => {
-      this.handleForceBatch();
+    // Extension Dashboard button
+    this.dashboardBtn.addEventListener('click', () => {
+      this.openExtensionDashboard();
     });
 
-    // Settings button
-    this.settingsBtn.addEventListener('click', () => {
-      this.openSettings();
+    // Blockchain Dashboard button (localhost)
+    this.blockchainDashboardBtn.addEventListener('click', () => {
+      this.openBlockchainDashboard();
     });
 
     // Transaction link click
     this.txHashLink.addEventListener('click', (e) => {
       this.handleTransactionLink(e);
     });
+  }
+
+  async checkBlockchainSettings() {
+    try {
+      console.log('Popup: Checking blockchain settings...');
+      const response = await this.sendMessage({ type: 'GET_PREFERENCES' });
+      console.log('Popup: Got preferences response:', response);
+      const prefs = response.preferences || {};
+      console.log('Popup: Blockchain enabled?', prefs.blockchainEnabled);
+
+      // Show blockchain dashboard button if enabled
+      if (prefs.blockchainEnabled) {
+        console.log('Popup: Showing blockchain dashboard button');
+        this.blockchainDashboardBtn.classList.remove('hidden');
+      } else {
+        console.log('Popup: Blockchain not enabled, button stays hidden');
+      }
+    } catch (error) {
+      console.error('Failed to check blockchain settings:', error);
+      // Hide blockchain button by default if can't check
+      this.blockchainDashboardBtn.classList.add('hidden');
+    }
   }
 
   async loadPopupData() {
@@ -130,45 +155,17 @@ class PopupManager {
     return `https://sepolia.etherscan.io/tx/${txHash}`;
   }
 
-  async handleForceBatch() {
-    try {
-      // Show loading state
-      this.forceBatchBtn.disabled = true;
-      this.forceBatchBtn.innerHTML = '<div class="loading"></div> Processing...';
-
-      // Send force batch message to background
-      const response = await this.sendMessage({ type: 'FORCE_BATCH_PROCESS' });
-
-      if (response.success) {
-        // Refresh data
-        await this.loadPopupData();
-
-        // Show success indicator
-        this.showSuccess('Batch processing initiated successfully');
-      } else {
-        throw new Error(response.error || 'Failed to initiate batch processing');
-      }
-
-    } catch (error) {
-      console.error('Failed to force batch:', error);
-      this.showError('Failed to process batch. Please try again.');
-    } finally {
-      // Reset button state
-      this.forceBatchBtn.disabled = false;
-      this.forceBatchBtn.textContent = 'Force Batch Submit';
-    }
+  async openExtensionDashboard() {
+    const dashboardUrl = chrome.runtime.getURL('dashboard/index.html');
+    chrome.tabs.create({ url: dashboardUrl });
+    window.close();
   }
 
-  async openSettings() {
-    // Open extension options page (if implemented)
-    if (chrome.runtime.openOptionsPage) {
-      chrome.runtime.openOptionsPage();
-    } else {
-      // Fallback: Open a settings page
-      chrome.tabs.create({
-        url: chrome.runtime.getURL('settings.html')
-      });
-    }
+  async openBlockchainDashboard() {
+    // Open localhost dashboard with wallet support
+    const dashboardUrl = 'http://localhost:8080';
+    chrome.tabs.create({ url: dashboardUrl });
+    window.close();
   }
 
   handleTransactionLink(event) {

@@ -232,6 +232,24 @@
                         </div>
                     </div>
 
+                    <hr style="margin: 30px 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.1);">
+
+                    <h3 style="margin-bottom: 15px; font-size: 18px;">Blockchain Settings</h3>
+
+                    <div class="preference-item">
+                        <div class="pref-info">
+                            <h3>Enable Blockchain Features</h3>
+                            <p>Store consent data on the blockchain. Requires wallet connection via localhost dashboard.
+                            </p>
+                        </div>
+                        <div class="pref-control">
+                            <label class="switch">
+                                <input type="checkbox" id="prefBlockchainEnabled">
+                                <span class="slider round"></span>
+                            </label>
+                        </div>
+                    </div>
+
                     <div class="preference-actions">
                         <button class="save-btn" id="savePreferencesBtn">Save Preferences</button>
                         <span id="saveStatus" class="save-status"></span>
@@ -264,7 +282,7 @@
 
     <!-- External Libraries -->
     <script src="../libs/chart.js"></script>
-    <script type="module" src="app.js?v=1.2"></script>
+    <script type="module" src="app.js"></script>
 </body>
 
 </html>

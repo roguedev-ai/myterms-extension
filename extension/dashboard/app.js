@@ -1,9 +1,9 @@
-import { walletManager } from '../extension/utils/wallet-manager.js';
-import { myTermsEthers } from '../extension/utils/ethers.js?v=1.1';
+import { walletManager } from '../utils/wallet-manager.js';
+import { myTermsEthers } from '../utils/ethers.js';
 // Note: storage.js uses IndexedDB which is origin-specific. 
 // If dashboard is run from file:// or a different origin than the extension, it won't see the extension's DB.
 // For now, we assume it shares the origin or is just a visualization.
-import { consentStorage } from '../extension/utils/storage.js';
+import { consentStorage } from '../utils/storage.js';
 
 /**
  * DataService handles communication with the extension backend.
@@ -119,13 +119,47 @@ class DashboardApp {
     async init() {
         this.initElements();
         this.attachEventListeners();
-        this.checkWalletConnection();
+
+        // Check if we're in extension context (chrome-extension://)
+        const isExtensionContext = window.location.protocol === 'chrome-extension:';
+
+        if (isExtensionContext) {
+            // Hide wallet-dependent features in extension context
+            this.disableWalletFeatures();
+        } else {
+            this.checkWalletConnection();
+        }
 
         // Initialize charts
         this.initCharts();
 
+        // Load initial data
+        await this.loadData();
+
+        // Hide loading overlay after initialization
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+        }
+
         // Check for URL actions (e.g. force batch)
-        this.checkUrlActions();
+        if (!isExtensionContext) {
+            this.checkUrlActions();
+        }
+    }
+
+    disableWalletFeatures() {
+        // Replace wallet status area with info message
+        const walletStatus = document.getElementById('walletStatus');
+        if (walletStatus) {
+            walletStatus.innerHTML = `
+                <div style="background: rgba(251, 191, 36, 0.2); padding: 10px; border-radius: 8px; text-align: center;">
+                    <p style="margin: 0; font-size: 13px; color: #fbbf24;">
+                        ℹ️ To connect wallet and submit batches, use the extension popup (click the extension icon)
+                    </p>
+                </div>
+            `;
+        }
     }
 
     async checkUrlActions() {
@@ -361,7 +395,8 @@ class DashboardApp {
             analytics: document.getElementById('prefAnalytics'),
             marketing: document.getElementById('prefMarketing'),
             functional: document.getElementById('prefFunctional'),
-            social: document.getElementById('prefSocial')
+            social: document.getElementById('prefSocial'),
+            blockchainEnabled: document.getElementById('prefBlockchainEnabled')
         };
     }
 
@@ -468,6 +503,7 @@ class DashboardApp {
                 this.prefs.marketing.checked = prefs.marketing;
                 this.prefs.functional.checked = prefs.functional;
                 this.prefs.social.checked = prefs.social;
+                this.prefs.blockchainEnabled.checked = prefs.blockchainEnabled || false;
             }
         } catch (error) {
             console.error('Failed to load preferences:', error);
@@ -485,6 +521,7 @@ class DashboardApp {
                 marketing: this.prefs.marketing.checked,
                 functional: this.prefs.functional.checked,
                 social: this.prefs.social.checked,
+                blockchainEnabled: this.prefs.blockchainEnabled.checked,
                 necessary: true // Always true
             };
 

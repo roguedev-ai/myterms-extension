@@ -57,32 +57,47 @@ class ConsentManager {
       }
 
       console.log('Checking for consents ready for batch processing...');
-      await this.processConsentBatch();
+
+      // Check if we have consents ready
+      const readyConsents = await consentStorage.getBatchReadyConsents(24);
+
+      if (readyConsents.length > 0) {
+        // We can't auto-process because we need user signature
+        // So we notify the user to open the popup
+        this.notifyBatchReady(readyConsents.length);
+      }
 
     } catch (error) {
       console.error('Error in batch check:', error);
     }
   }
 
-  async processConsentBatch() {
+  notifyBatchReady(count) {
+    if (!chrome || !chrome.notifications) return;
+
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon128.png',
+      title: 'MyTerms: Batch Ready',
+      message: `${count} consents are ready to be secured on blockchain. Click to sign.`,
+      requireInteraction: true
+    });
+  }
+
+  async prepareConsentBatch(force = false) {
     this.processing = true;
 
     try {
-      // Get consents that are ready for batching (older than 24 hours)
-      const readyConsents = await consentStorage.getBatchReadyConsents(24);
+      // Get consents that are ready for batching
+      const threshold = force ? 0 : 24;
+      const readyConsents = await consentStorage.getBatchReadyConsents(threshold);
 
       if (readyConsents.length === 0) {
         console.log('No consents ready for batch processing');
-        return;
+        throw new Error('No pending consents to batch');
       }
 
-      console.log(`Processing batch of ${readyConsents.length} consents...`);
-
-      // Check if wallet is ready
-      if (!myTermsEthers.isReady()) {
-        console.log('Wallet not ready, cannot process batch');
-        return;
-      }
+      console.log(`Preparing batch of ${readyConsents.length} consents...`);
 
       // Group consents by site
       const groupedConsents = this.groupConsentsBySite(readyConsents);
@@ -99,14 +114,27 @@ class ConsentManager {
         hashes.push(batchHash);
       }
 
-      console.log(`Submitting batch: ${sites.length} sites, ${readyConsents.length} total consents`);
+      return {
+        sites,
+        hashes,
+        consentIds: readyConsents.map(c => c.id),
+        siteData: groupedConsents,
+        count: readyConsents.length
+      };
 
-      // Submit to blockchain
-      const txResult = await myTermsEthers.submitConsentBatch(sites, hashes);
+    } catch (error) {
+      console.error('Failed to prepare consent batch:', error);
+      this.processing = false;
+      throw error;
+    }
+  }
+
+  async finalizeBatch(txResult, batchData) {
+    try {
+      console.log('Finalizing batch with tx:', txResult.hash);
 
       // Mark consents as batched
-      const consentIds = readyConsents.map(c => c.id);
-      await consentStorage.markAsBatched(consentIds, {
+      await consentStorage.markAsBatched(batchData.consentIds, {
         batchId: txResult.hash,
         txHash: txResult.hash,
         blockNumber: txResult.blockNumber
@@ -115,8 +143,8 @@ class ConsentManager {
       // Record batch information
       await consentStorage.recordBatch({
         txHash: txResult.hash,
-        consentIds: consentIds,
-        siteData: groupedConsents,
+        consentIds: batchData.consentIds,
+        siteData: batchData.siteData,
         gasUsed: txResult.gasUsed,
         blockNumber: txResult.blockNumber
       });
@@ -125,22 +153,14 @@ class ConsentManager {
       this.lastBatchTime = Date.now();
 
       // Notify user of successful batch
-      this.notifyUserOfBatch(txResult, readyConsents.length);
+      this.notifyUserOfBatch(txResult, batchData.count);
 
-      console.log('Batch processed successfully:', txResult.hash);
+      console.log('Batch finalized successfully');
 
     } catch (error) {
-      console.error('Failed to process consent batch:', error);
-
-      // Notify user of failure
-      if (error.message.includes('rejected')) {
-        this.notifyUserOfBatchFailure('Transaction rejected by user');
-      } else if (error.message.includes('Insufficient funds')) {
-        this.notifyUserOfBatchFailure('Insufficient funds for transaction');
-      } else {
-        this.notifyUserOfBatchFailure('Batch processing failed');
-      }
-
+      console.error('Failed to finalize batch:', error);
+      this.notifyUserOfBatchFailure(`Batch finalization failed: ${error.message}`);
+      throw error;
     } finally {
       this.processing = false;
     }
@@ -251,6 +271,79 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
     return true; // Keep message channel open for async response
   }
+
+  if (request.type === 'GET_CONSENT_DATA') {
+    console.log('Background: Received GET_CONSENT_DATA request');
+    // Fetch consent data for dashboard
+    Promise.all([
+      consentStorage.getAllQueuedConsents(),
+      consentStorage.getBatchStats()
+    ])
+      .then(([consents, batches]) => {
+        console.log('Background: Sending response with', consents.length, 'consents');
+        sendResponse({ consents, batches });
+      })
+      .catch(error => {
+        console.error('Background: Error getting consent data:', error);
+        sendResponse({ consents: [], batches: null, error: error.message });
+      });
+    return true; // Keep message channel open
+  }
+
+  if (request.type === 'PREPARE_BATCH') {
+    consentManager.prepareConsentBatch()
+      .then(data => sendResponse({ success: true, data }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (request.type === 'BATCH_COMPLETE') {
+    consentManager.finalizeBatch(request.result, request.batchData)
+      .then(() => sendResponse({ success: true }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (request.type === 'GET_STATS') {
+    consentManager.getStats()
+      .then(stats => sendResponse(stats))
+      .catch(error => sendResponse({ error: error.message }));
+    return true;
+  }
+
+  if (request.type === 'FORCE_BATCH') {
+    consentManager.checkAndProcessBatch()
+      .then(() => sendResponse({ success: true }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  if (request.type === 'GET_PREFERENCES') {
+    chrome.storage.sync.get(['myTermsProfile'], (result) => {
+      sendResponse({ preferences: result.myTermsProfile?.preferences || {} });
+    });
+    return true;
+  }
+
+  if (request.type === 'SAVE_PREFERENCES') {
+    chrome.storage.sync.get(['myTermsProfile'], (result) => {
+      const profile = result.myTermsProfile || {};
+      profile.preferences = request.preferences;
+      chrome.storage.sync.set({ myTermsProfile: profile }, () => {
+        sendResponse({ success: true });
+      });
+    });
+    return true;
+  }
+});
+
+// Handle notification clicks
+chrome.notifications.onClicked.addListener((notificationId) => {
+  // Open dashboard to sign batch
+  // Use localhost to allow wallet injection
+  const dashboardUrl = 'http://localhost:8000/dashboard/index.html?action=forceBatch';
+  chrome.tabs.create({ url: dashboardUrl });
+  chrome.notifications.clear(notificationId);
 });
 
 // Export for testing

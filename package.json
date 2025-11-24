@@ -5,7 +5,8 @@
     "scripts": {
         "test": "npx hardhat test",
         "compile": "npx hardhat compile",
-        "deploy": "npx hardhat run scripts/deploy.js"
+        "deploy": "npx hardhat run scripts/deploy.js",
+        "dashboard": "node serve-dashboard.js"
     },
     "devDependencies": {
         "@nomicfoundation/hardhat-toolbox": "^4.0.0",

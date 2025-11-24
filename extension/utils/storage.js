@@ -342,31 +342,36 @@ class ConsentStorage {
   async getBatchStats() {
     try {
       const db = await this.waitForDB();
-      const transaction = db.transaction([BATCH_STORE], 'readonly');
-      const store = transaction.objectStore(BATCH_STORE);
 
-      return new Promise((resolve, reject) => {
-        const request = store.getAll();
-        const consentStats = db.transaction([CONSENT_STORE], 'readonly').objectStore(CONSENT_STORE);
+      return Promise.all([
+        // Get all batches
+        new Promise((resolve, reject) => {
+          const transaction = db.transaction([BATCH_STORE], 'readonly');
+          const store = transaction.objectStore(BATCH_STORE);
+          const request = store.getAll();
 
-        request.onsuccess = () => {
-          const batches = request.result;
-          const totalBatches = batches.length;
-          const totalGasUsed = batches.reduce((sum, batch) => sum + (batch.gasUsed || 0), 0);
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = (event) => reject(event.target.error);
+        }),
+        // Get total consent count
+        new Promise((resolve, reject) => {
+          const transaction = db.transaction([CONSENT_STORE], 'readonly');
+          const store = transaction.objectStore(CONSENT_STORE);
+          const request = store.count();
 
-          const consentRequest = consentStats.count();
-          consentRequest.onsuccess = () => {
-            resolve({
-              totalBatches,
-              totalConsents: consentRequest.result,
-              totalGasUsed,
-              averageGasPerBatch: totalBatches > 0 ? totalGasUsed / totalBatches : 0
-            });
-          };
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = (event) => reject(event.target.error);
+        })
+      ]).then(([batches, totalConsents]) => {
+        const totalBatches = batches.length;
+        const totalGasUsed = batches.reduce((sum, batch) => sum + (batch.gasUsed || 0), 0);
+
+        return {
+          totalBatches,
+          totalConsents,
+          totalGasUsed,
+          averageGasPerBatch: totalBatches > 0 ? totalGasUsed / totalBatches : 0
         };
-
-        request.onerror = (event) => reject(event.target.error);
-        transaction.onerror = (event) => reject(event.target.error);
       });
     } catch (error) {
       console.error('Error getting batch stats:', error);

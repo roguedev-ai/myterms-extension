@@ -25,6 +25,18 @@ class MyTermsEthers {
 
     await this.loadContractConfig();
     await this.initializeContract();
+    this.initialized = true;
+  }
+
+  // Force re-initialization (useful after network switch)
+  async reset() {
+    console.log('MyTermsEthers: Resetting configuration...');
+    this.contract = null;
+    this.contractAddress = null;
+    this.contractABI = null;
+    this.contractConfig = null; // Clear cached config
+    this.initialized = false;
+    await this.initialize();
   }
 
   // Connect to specific wallet type
@@ -120,7 +132,7 @@ class MyTermsEthers {
 
       const networks = {
         'sepolia': {
-          address: '0x...', // Replace with actual deployed address
+          address: '0x0bF53DB13EDe40046a7232845571a93B1cceFF5f', // Deployed MyTermsConsentLedger
           abi: [
             {
               "inputs": [
@@ -156,8 +168,44 @@ class MyTermsEthers {
           ]
         },
         'mainnet': {
-          address: '0x...',
+          address: '0x0000000000000000000000000000000000000000', // Placeholder
           abi: []
+        },
+        'localhost': {
+          address: '0x5FbDB2315678afecb367f032d93F642f64180aa3', // Default Hardhat deployment address
+          abi: [
+            {
+              "inputs": [
+                { "internalType": "string[]", "name": "sites", "type": "string[]" },
+                { "internalType": "bytes32[]", "name": "hashes", "type": "bytes32[]" }
+              ],
+              "name": "logConsentBatch",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "inputs": [
+                { "internalType": "string", "name": "site", "type": "string" },
+                { "internalType": "bytes32", "name": "termsHash", "type": "bytes32" }
+              ],
+              "name": "logConsent",
+              "outputs": [],
+              "stateMutability": "nonpayable",
+              "type": "function"
+            },
+            {
+              "anonymous": false,
+              "inputs": [
+                { "indexed": true, "internalType": "address", "name": "user", "type": "address" },
+                { "indexed": false, "internalType": "string", "name": "siteDomain", "type": "string" },
+                { "indexed": false, "internalType": "bytes32", "name": "termsHash", "type": "bytes32" },
+                { "indexed": false, "internalType": "uint256", "name": "timestamp", "type": "uint256" }
+              ],
+              "name": "ConsentLogged",
+              "type": "event"
+            }
+          ]
         }
       };
 
@@ -165,7 +213,10 @@ class MyTermsEthers {
         this.contractAddress = networks[network].address;
         this.contractABI = networks[network].abi;
       } else {
-        throw new Error(`Network ${network} not supported`);
+        console.warn(`Network ${network} not supported, falling back to localhost`);
+        // Fallback to localhost if unknown (likely development)
+        this.contractAddress = networks['localhost'].address;
+        this.contractABI = networks['localhost'].abi;
       }
     } catch (error) {
       console.error('Failed to load remote config:', error);
@@ -178,8 +229,14 @@ class MyTermsEthers {
   async initializeContract() {
     const wallet = this.getConnectedWallet();
 
-    if (!this.contractAddress || !this.contractABI || !wallet || !wallet.signer) {
-      console.warn('Cannot initialize contract: missing wallet, configuration, or signer');
+    // If no wallet is connected, we can't initialize the contract.
+    // This is normal state on first load, so we just return null without warning.
+    if (!wallet || !wallet.signer) {
+      return null;
+    }
+
+    if (!this.contractAddress || !this.contractABI) {
+      console.warn('Cannot initialize contract: missing configuration');
       return null;
     }
 
@@ -213,7 +270,9 @@ class MyTermsEthers {
         5: 'goerli',
         11155111: 'sepolia',
         137: 'polygon',
-        80001: 'mumbai'
+        80001: 'mumbai',
+        31337: 'localhost', // Hardhat default
+        1337: 'localhost'   // Alternative local
       };
 
       return networks[chainId] || 'unknown';
@@ -232,8 +291,51 @@ class MyTermsEthers {
     try {
       console.log('Submitting consent batch to blockchain...');
 
+      const network = await this.getNetworkName();
+      console.log('Current network:', network);
+      console.log('Contract address:', this.contractAddress);
+      console.log('Contract ABI length:', this.contractABI?.length);
+
+      // Re-check contract before submission
+      if (!this.contract) {
+        console.log('Contract object is null, attempting initialization...');
+        await this.initializeContract();
+        if (!this.contract) throw new Error('Failed to initialize contract');
+      }
+
+      // Check if function exists
+      // Get function instance safely
+      let method;
+      try {
+        method = this.contract.getFunction('logConsentBatch');
+      } catch (e) {
+        console.error('Failed to get function logConsentBatch:', e);
+      }
+
+      if (!method) {
+        console.error('Contract functions available:', Object.keys(this.contract));
+        // Check if we are on a supported network
+        if (this.contractABI && this.contractABI.length === 0) {
+          throw new Error(`No ABI found for network ${network}. Please switch to Localhost or Sepolia.`);
+        }
+        throw new Error('Contract function logConsentBatch not found. Check ABI and Network.');
+      }
+
       // Estimate gas
-      const gasEstimate = await this.contract.logConsentBatch.estimateGas(siteDomains, termsHashes);
+      let gasEstimate;
+      try {
+        if (method.estimateGas) {
+          gasEstimate = await method.estimateGas(siteDomains, termsHashes);
+        } else {
+          // Fallback for older ethers versions or proxies
+          console.warn('method.estimateGas missing, trying contract.estimateGas.logConsentBatch');
+          gasEstimate = await this.contract.estimateGas.logConsentBatch(siteDomains, termsHashes);
+        }
+      } catch (e) {
+        console.warn('Gas estimation failed, using fallback:', e);
+        gasEstimate = BigInt(500000); // Safe default for batch
+      }
+
       console.log('Estimated gas:', gasEstimate.toString());
 
       // Submit transaction
@@ -262,7 +364,7 @@ class MyTermsEthers {
       } else if (error.code === 'INSUFFICIENT_FUNDS') {
         throw new Error('Insufficient funds for transaction');
       } else {
-        throw new Error(`Transaction failed: ${error.message}`);
+        throw new Error(`Transaction failed: ${error.message} `);
       }
     }
   }
@@ -297,18 +399,16 @@ class MyTermsEthers {
       } else if (error.code === 'INSUFFICIENT_FUNDS') {
         throw new Error('Insufficient funds for transaction');
       } else {
-        throw new Error(`Transaction failed: ${error.message}`);
+        throw new Error(`Transaction failed: ${error.message} `);
       }
     }
   }
 
   // Generate hash from terms content (SHA-256)
   async generateTermsHash(termsContent) {
-    const wallet = this.getConnectedWallet();
-
-    if (!wallet || !wallet.provider) {
-      throw new Error('Wallet not connected - provider not available');
-    }
+    // Wallet check removed to allow background script usage
+    // const wallet = this.getConnectedWallet();
+    // if (!wallet || !wallet.provider) { ... }
 
     try {
       const encoder = new TextEncoder();

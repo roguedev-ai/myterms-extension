@@ -29,28 +29,59 @@ UI: Plain JS + minimal HTML/CSS (upgradeable to React).
 
 ## Quick Start
 
+### Automated Setup (Recommended)
+```bash
+# Run the setup script
+./setup.sh
+```
+
+This will:
+- Install all dependencies
+- Compile the smart contract
+- Run tests
+- Generate extension icons
+
+### Manual Setup
+
 ### 1. Install Dependencies
 ```bash
 npm install
 ```
 
-### 2. Compile + Deploy Smart Contract
+### 2. Compile + Test Smart Contract
 ```bash
 npx hardhat compile
 npx hardhat test
+```
+
+### 3. (Optional) Deploy to Sepolia
+```bash
+# Copy and configure .env file
+cp .env.example .env
+# Edit .env with your settings
+
+# Deploy
 npx hardhat run scripts/deploy.js --network sepolia
 ```
 
-### 3. Build & Load Extension
+### 4. Load Extension in Browser
 
 Open Chrome/Edge → Extensions → "Load unpacked".\
 Select `extension/` folder.\
 The plugin will auto-run on supported websites.
 
-### 4. Dashboard
+**For detailed testing instructions, see [TESTING.md](TESTING.md)**
+
+### 5. Dashboard
 
 Open `dashboard/index.html` in a browser.\
 Connect wallet → view logged consent history.
+
+## Documentation
+
+- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development guide and workflows
+- **[TESTING.md](TESTING.md)** - Comprehensive testing guide
+- **[README.md](README.md)** - This file (overview)
 
 ## Repository Structure
 

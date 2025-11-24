@@ -19,7 +19,7 @@ class WalletManager {
     };
 
     this.connectedWallet = null;
-    this.onWalletChange = null;
+    this._onWalletChangeCallback = null;
     this.onAccountChange = null;
     this.onNetworkChange = null;
 
@@ -136,8 +136,8 @@ class WalletManager {
       console.log(`Successfully connected to ${walletType}:`, this.connectedWallet.account);
 
       // Notify listeners
-      if (this.onWalletChange) {
-        this.onWalletChange(this.connectedWallet);
+      if (this._onWalletChangeCallback) {
+        this._onWalletChangeCallback(this.connectedWallet);
       }
 
       return this.connectedWallet;
@@ -147,10 +147,30 @@ class WalletManager {
     }
   }
 
-  // MetaMask connection
+  // Injected wallet connection (MetaMask, Brave, etc.)
   async connectMetaMask() {
-    if (!this.wallets.metamask) {
-      throw new Error('MetaMask not detected');
+    // Check if we're in an extension context (chrome-extension://)
+    const isExtensionContext = window.location.protocol === 'chrome-extension:';
+
+    if (isExtensionContext) {
+      // Extension pages don't have window.ethereum injected
+      // We need to use a different approach: open a helper window
+      return this.connectMetaMaskViaHelper();
+    }
+
+    // Check for any injected provider (window.ethereum)
+    // We poll briefly to handle race conditions where the provider is injected asynchronously
+    if (!window.ethereum) {
+      for (let i = 0; i < 30; i++) {
+        if (window.ethereum) {
+          break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    if (!window.ethereum) {
+      throw new Error('No crypto wallet found. Please install MetaMask, Brave, or another Ethereum wallet.');
     }
 
     try {
@@ -181,6 +201,15 @@ class WalletManager {
       }
       throw error;
     }
+  }
+
+  // Connect MetaMask from extension context via helper window
+  async connectMetaMaskViaHelper() {
+    // Simpler approach: Show instructions to user
+    throw new Error(
+      'Wallet connections are not available in extension pages. ' +
+      'Please use the popup (click extension icon) or open this dashboard in a new tab to connect your wallet.'
+    );
   }
 
   // WalletConnect connection (simplified for this demo)
@@ -269,8 +298,8 @@ class WalletManager {
       console.log('Wallet disconnected');
 
       // Notify listeners
-      if (this.onWalletChange) {
-        this.onWalletChange(null);
+      if (this._onWalletChangeCallback) {
+        this._onWalletChangeCallback(null);
       }
     } catch (error) {
       console.error('Error disconnecting wallet:', error);
@@ -341,7 +370,7 @@ class WalletManager {
   // Storage helpers
   async saveConnectionPreference(walletType) {
     const data = { walletType, timestamp: Date.now() };
-    if (typeof chrome !== 'undefined' && chrome.storage) {
+    if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
       await chrome.storage.local.set({ walletPreference: data });
     } else if (typeof localStorage !== 'undefined') {
       localStorage.setItem('myterms_wallet_preference', JSON.stringify(data));
@@ -351,7 +380,7 @@ class WalletManager {
   async getSavedConnectionPreference() {
     try {
       let data;
-      if (typeof chrome !== 'undefined' && chrome.storage) {
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
         data = await chrome.storage.local.get(['walletPreference']);
         return data?.walletPreference?.walletType;
       } else if (typeof localStorage !== 'undefined') {
@@ -370,7 +399,7 @@ class WalletManager {
 
   async clearConnectionPreference() {
     try {
-      if (typeof chrome !== 'undefined' && chrome.storage) {
+      if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
         await chrome.storage.local.remove(['walletPreference']);
       } else if (typeof localStorage !== 'undefined') {
         localStorage.removeItem('myterms_wallet_preference');
@@ -430,7 +459,7 @@ class WalletManager {
 
   // Set event listeners
   onWalletChange(callback) {
-    this.onWalletChange = callback;
+    this._onWalletChangeCallback = callback;
   }
 
   onAccountChange(callback) {
