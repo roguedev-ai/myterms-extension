@@ -229,25 +229,21 @@ class ConsentManager {
   }
 }
 
-// Handle messages from content script
+// Handle ALL messages from content script, popup, and dashboard
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // CONSENT_CAPTURED - from content script
   if (request.type === 'CONSENT_CAPTURED') {
     console.log('Received consent from content script:', request.consent.siteDomain);
-
-    // Add to storage
     consentStorage.addToQueue(request.consent).then(() => {
       sendResponse({ success: true });
     }).catch((error) => {
       console.error('Failed to add consent to queue:', error);
       sendResponse({ success: false, error: error.message });
     });
-
-    return true; // Keep message channel open for async response
+    return true;
   }
-});
 
-// Handle popup messages
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  // GET_POPUP_DATA - from popup
   if (request.type === 'GET_POPUP_DATA') {
     Promise.all([
       consentStorage.getAllQueuedConsents(),
@@ -268,13 +264,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         error: error.message
       });
     });
-
-    return true; // Keep message channel open for async response
+    return true;
   }
 
+  // GET_CONSENT_DATA - from dashboard
   if (request.type === 'GET_CONSENT_DATA') {
     console.log('Background: Received GET_CONSENT_DATA request');
-    // Fetch consent data for dashboard
     Promise.all([
       consentStorage.getAllQueuedConsents(),
       consentStorage.getBatchStats()
@@ -287,9 +282,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         console.error('Background: Error getting consent data:', error);
         sendResponse({ consents: [], batches: null, error: error.message });
       });
-    return true; // Keep message channel open
+    return true;
   }
 
+  // PREPARE_BATCH - from dashboard
   if (request.type === 'PREPARE_BATCH') {
     consentManager.prepareConsentBatch()
       .then(data => sendResponse({ success: true, data }))
@@ -297,6 +293,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  // BATCH_COMPLETE - from dashboard
   if (request.type === 'BATCH_COMPLETE') {
     consentManager.finalizeBatch(request.result, request.batchData)
       .then(() => sendResponse({ success: true }))
@@ -304,6 +301,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  // GET_STATS - from dashboard
   if (request.type === 'GET_STATS') {
     consentManager.getStats()
       .then(stats => sendResponse(stats))
@@ -311,6 +309,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  // FORCE_BATCH - from popup/dashboard
   if (request.type === 'FORCE_BATCH') {
     consentManager.checkAndProcessBatch()
       .then(() => sendResponse({ success: true }))
@@ -318,6 +317,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  // GET_PREFERENCES - from dashboard
   if (request.type === 'GET_PREFERENCES') {
     chrome.storage.sync.get(['myTermsProfile'], (result) => {
       sendResponse({ preferences: result.myTermsProfile?.preferences || {} });
@@ -325,6 +325,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  // SAVE_PREFERENCES - from dashboard
   if (request.type === 'SAVE_PREFERENCES') {
     chrome.storage.sync.get(['myTermsProfile'], (result) => {
       const profile = result.myTermsProfile || {};
@@ -335,6 +336,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true;
   }
+
+  // Unknown message type - don't keep channel open
+  return false;
 });
 
 // Handle notification clicks
