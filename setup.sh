@@ -1,67 +1,73 @@
 #!/bin/bash
 
-# MyTerms Extension - Simple Setup Script
-# Sets up the entire development environment
-
-# Don't exit on error immediately, let us see what happens
-# set -e 
+# MyTerms Extension - Setup Script
 
 echo "🛡️  MyTerms Extension - Setup"
 echo "========================================"
-echo ""
 
-# Try to load NVM if present (just in case)
+# ⚠️ WARNING ABOUT SUDO
+if [ "$EUID" -eq 0 ]; then
+  echo "❌ WARNING: You are running as root (sudo)."
+  echo "   This usually breaks NVM/Node.js detection."
+  echo "   Please run without sudo: ./setup.sh"
+  echo ""
+  read -p "   Press Enter to continue anyway (or Ctrl+C to stop)..."
+fi
+
+# 1. Try to load environment
 export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # Load NVM
+[ -s "$HOME/.bashrc" ] && source "$HOME/.bashrc"  # Load bashrc
 
-echo "ℹ️  Using Node: $(node --version 2>/dev/null || echo 'Not found')"
-echo "ℹ️  Using NPM: $(npm --version 2>/dev/null || echo 'Not found')"
-echo ""
-
-# Install dependencies
-echo "📦 Installing dependencies..."
-npm install
-if [ $? -eq 0 ]; then
-    echo "✓ Dependencies installed"
-else
-    echo "❌ npm install failed. Please run 'npm install' manually."
+# 2. Check for Node
+if ! command -v node &> /dev/null; then
+    echo ""
+    echo "❌ Error: 'node' command still not found."
+    echo "   The script cannot see your Node.js installation."
+    echo ""
+    echo "👉 PLEASE RUN THESE COMMANDS MANUALLY INSTEAD:"
+    echo "   (Copy and paste them one by one)"
+    echo ""
+    echo "   npm install"
+    echo "   npx hardhat compile"
+    echo "   npm test"
+    echo "   node scripts/generate-icons.js"
+    echo "   cp -r dashboard extension/"
+    echo "   cp .env.example .env"
+    echo ""
     exit 1
 fi
-echo ""
 
-# Compile smart contract
+echo "✓ Using Node: $(node --version)"
+
+# 3. Run Setup Steps
+echo ""
+echo "📦 Installing dependencies..."
+npm install || exit 1
+
+echo ""
 echo "🔨 Compiling smart contract..."
-npx hardhat compile
-echo "✓ Contract compiled"
-echo ""
+npx hardhat compile || exit 1
 
-# Run tests
-echo "🧪 Running smart contract tests..."
+echo ""
+echo "🧪 Running tests..."
 npm test
-echo ""
 
-# Generate icons if script exists
+echo ""
+echo "🎨 Generating icons..."
 if [ -f "scripts/generate-icons.js" ]; then
-    echo "🎨 Generating extension icons..."
     node scripts/generate-icons.js
-    echo "✓ Icons generated"
-    echo ""
 fi
 
-# Copy dashboard to extension folder
-echo "📂 Setting up extension dashboard..."
+echo ""
+echo "📂 Setting up dashboard..."
 rm -rf extension/dashboard 2>/dev/null || true
 cp -r dashboard extension/
-echo "✓ Dashboard copied"
-echo ""
 
-# Setup environment file
-if [ ! -f ".env" ]; then
-    echo "📝 Setting up environment file..."
-    if [ -f ".env.example" ]; then
-        cp .env.example .env
-        echo "✓ Created .env from .env.example"
-    fi
+echo ""
+echo "📝 Setting up .env..."
+if [ ! -f ".env" ] && [ -f ".env.example" ]; then
+    cp .env.example .env
 fi
 
 echo ""
