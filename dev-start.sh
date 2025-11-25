@@ -18,6 +18,20 @@ echo "🚀 MyTerms Local Blockchain Development"
 echo "========================================"
 echo ""
 
+# Check for Node.js
+if ! command -v node &> /dev/null; then
+    echo "⚠️  Node.js command not found."
+    echo "   Please ensure Node.js is installed and in your PATH."
+    # We don't exit here, we let it try to fail on the actual command if needed, 
+    # or the user might have aliases.
+fi
+
+# Check for npx
+if ! command -v npx &> /dev/null; then
+    echo "⚠️  npx command not found."
+    echo "   This script requires npx (usually comes with Node.js)."
+fi
+
 # Check if .env exists
 if [ ! -f ".env" ]; then
     echo "⚠️  .env file not found!"
