@@ -785,6 +785,12 @@ class DashboardApp {
         // Sort by timestamp desc
         const sorted = [...consents].sort((a, b) => b.timestamp - a.timestamp);
 
+        // If we have data, make sure error message is hidden
+        if (sorted.length > 0 && this.noDataMsg) {
+            this.noDataMsg.style.display = 'none';
+            this.noDataMsg.style.visibility = 'hidden';
+        }
+
         sorted.forEach(consent => {
             const item = document.createElement('div');
             item.className = 'timeline-item';
