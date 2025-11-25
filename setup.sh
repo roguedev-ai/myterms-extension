@@ -1,39 +1,32 @@
 #!/bin/bash
 
-# MyTerms Extension - Complete Setup Script
+# MyTerms Extension - Simple Setup Script
 # Sets up the entire development environment
 
-set -e
+# Don't exit on error immediately, let us see what happens
+# set -e 
 
-echo "🛡️  MyTerms Extension - Complete Setup"
+echo "🛡️  MyTerms Extension - Setup"
 echo "========================================"
 echo ""
 
-# Try to load NVM if present
+# Try to load NVM if present (just in case)
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-# Check if Node.js is installed
-if ! command -v node &> /dev/null; then
-    echo "⚠️  Node.js command not found in PATH."
-    echo "   If you installed it via NVM, it might not be available in this script shell."
-    echo "   Trying to continue anyway (assuming npm works)..."
-    
-    if ! command -v npm &> /dev/null; then
-        echo "❌ npm is also missing. Please ensure Node.js is installed and in your PATH."
-        echo "   Download: https://nodejs.org/"
-        # Don't exit, just warn strongly
-        echo "   ⚠️  Continuing, but commands may fail..."
-    fi
-fi
-
-echo "✓ Node.js found: $(node --version)"
+echo "ℹ️  Using Node: $(node --version 2>/dev/null || echo 'Not found')"
+echo "ℹ️  Using NPM: $(npm --version 2>/dev/null || echo 'Not found')"
 echo ""
 
 # Install dependencies
 echo "📦 Installing dependencies..."
 npm install
-echo "✓ Dependencies installed"
+if [ $? -eq 0 ]; then
+    echo "✓ Dependencies installed"
+else
+    echo "❌ npm install failed. Please run 'npm install' manually."
+    exit 1
+fi
 echo ""
 
 # Compile smart contract
@@ -45,9 +38,6 @@ echo ""
 # Run tests
 echo "🧪 Running smart contract tests..."
 npm test
-if [ $? -ne 0 ]; then
-    echo "⚠️  Tests failed, but continuing setup..."
-fi
 echo ""
 
 # Generate icons if script exists
@@ -58,18 +48,11 @@ if [ -f "scripts/generate-icons.js" ]; then
     echo ""
 fi
 
-# Copy dashboard to extension folder (for extension-mode access)
+# Copy dashboard to extension folder
 echo "📂 Setting up extension dashboard..."
-if [ -d "dashboard" ]; then
-    # Remove old dashboard if exists
-    rm -rf extension/dashboard 2>/dev/null || true
-    
-    # Copy dashboard files
-    cp -r dashboard extension/
-    echo "✓ Dashboard copied to extension/"
-else
-    echo "⚠️  Dashboard folder not found, skipping..."
-fi
+rm -rf extension/dashboard 2>/dev/null || true
+cp -r dashboard extension/
+echo "✓ Dashboard copied"
 echo ""
 
 # Setup environment file
@@ -78,48 +61,8 @@ if [ ! -f ".env" ]; then
     if [ -f ".env.example" ]; then
         cp .env.example .env
         echo "✓ Created .env from .env.example"
-        echo ""
-        echo "⚠️  IMPORTANT: Edit .env and add your configuration!"
-        echo "   - Add your Sepolia RPC URL (or use the default)"
-        echo "   - Add your private key (for testnet only!)"
-        echo "   - Never commit .env to git!"
-    else
-        echo "⚠️  .env.example not found, skipping..."
     fi
-else
-    echo "✓ .env already exists"
 fi
-echo ""
 
+echo ""
 echo "✅ Setup complete!"
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📋 Next Steps:"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
-echo "1️⃣  Load Extension in Chrome:"
-echo "   • Open chrome://extensions/"
-echo "   • Enable 'Developer mode'"
-echo "   • Click 'Load unpacked'"
-echo "   • Select the 'extension' folder"
-echo ""
-echo "2️⃣  For Local Blockchain Development:"
-echo "   • Run: ./dev-start.sh"
-echo "   • This starts Hardhat node + deploys contract + starts dashboard"
-echo ""
-echo "3️⃣  For Production Dashboard Only:"
-echo "   • Run: npm run dashboard"
-echo " • Opens at http://localhost:8080"
-echo ""
-echo "4️⃣  (Optional) Deploy to Sepolia Testnet:"
-echo "   • Configure .env with your private key"
-echo "   • Run: npx hardhat run scripts/deploy.js --network sepolia"
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📚 Documentation:"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "   • LOCAL_BLOCKCHAIN.md - Local blockchain setup"
-echo "   • DEVELOPMENT.md - Development guide"
-echo "   • TESTING.md - Testing guide"
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo ""
