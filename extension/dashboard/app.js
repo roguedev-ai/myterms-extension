@@ -680,14 +680,12 @@ class DashboardApp {
             return;
         }
 
-        // Hide no data message and reset content
-        this.noDataMsg.style.display = 'none';
-        this.noDataMsg.innerHTML = `
-            <div class="no-data-icon">📋</div>
-            <h3>No Consents Found</h3>
-            <p>Connect your wallet to view your consent history, or try refreshing the data.</p>
-            <button class="refresh-btn" id="retryButton">🔄 Retry</button>
-        `;
+        // Hide no data/error message completely
+        if (this.noDataMsg) {
+            this.noDataMsg.style.display = 'none';
+            this.noDataMsg.style.visibility = 'hidden';
+            this.noDataMsg.classList.add('hidden');
+        }
 
         // Update Stats
         this.stats.total.textContent = consents.length;
