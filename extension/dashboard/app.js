@@ -52,7 +52,7 @@ class DataService {
             // Timeout after 5 seconds
             setTimeout(() => {
                 window.removeEventListener('message', handler);
-                reject(new Error('Bridge request timed out. Is the extension installed and active?'));
+                reject(new Error('Bridge request timed out. Please ensure the MyTerms extension is installed, enabled, and reloaded.'));
             }, 5000);
 
             // Send request to content script
