@@ -49,11 +49,11 @@ class DataService {
 
             window.addEventListener('message', handler);
 
-            // Timeout after 5 seconds
+            // Timeout after 10 seconds (increased for large datasets)
             setTimeout(() => {
                 window.removeEventListener('message', handler);
-                reject(new Error('Bridge request timed out. Please ensure the MyTerms extension is installed, enabled, and reloaded.'));
-            }, 5000);
+                reject(new Error('Bridge request timed out (10s). The dataset might be too large. Try clearing old consents or using the extension dashboard.'));
+            }, 10000);
 
             // Send request to content script
             window.postMessage({

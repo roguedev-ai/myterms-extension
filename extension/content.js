@@ -97,7 +97,8 @@ class EnhancedBannerDetector {
                 console.error('Bridge: chrome.runtime.lastError:', chrome.runtime.lastError);
                 reject(new Error(chrome.runtime.lastError.message));
               } else {
-                console.log('Bridge: Received response from background:', res);
+                const size = JSON.stringify(res).length;
+                console.log('Bridge: Received response from background:', res, `Size: ${(size / 1024).toFixed(2)}KB`);
                 resolve(res);
               }
             });
