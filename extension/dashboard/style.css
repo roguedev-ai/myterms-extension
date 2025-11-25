@@ -477,13 +477,9 @@ select:focus {
 }
 
 /* Sections */
-.sites-section,
-.analytics-section {
-  display: none;
-}
-
 .sites-section.hidden,
-.analytics-section.hidden {
+.analytics-section.hidden,
+.timeline-section.hidden {
   display: none;
 }
 
