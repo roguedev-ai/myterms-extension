@@ -117,32 +117,38 @@ class DashboardApp {
     }
 
     async init() {
-        this.initElements();
-        this.attachEventListeners();
+        try {
+            this.initElements();
+            this.attachEventListeners();
 
-        // Check if we're in extension context (chrome-extension://)
-        const isExtensionContext = window.location.protocol === 'chrome-extension:';
+            // Check if we're in extension context (chrome-extension://)
+            const isExtensionContext = window.location.protocol === 'chrome-extension:';
 
-        if (isExtensionContext) {
-            // Hide wallet-dependent features in extension context
-            this.disableWalletFeatures();
-        } else {
-            this.checkWalletConnection();
-        }
+            if (isExtensionContext) {
+                // Hide wallet-dependent features in extension context
+                this.disableWalletFeatures();
+            } else {
+                this.checkWalletConnection();
+            }
 
-        // Initialize charts
-        this.initCharts();
+            // Initialize charts
+            this.initCharts();
 
-        // Load initial data
-        await this.loadData();
-
-        // Hide loading overlay after initialization
-        const overlay = document.getElementById('loadingOverlay');
-        if (overlay) {
-            overlay.classList.add('hidden');
+            // Load initial data
+            await this.loadData();
+        } catch (error) {
+            console.error('Dashboard initialization failed:', error);
+            this.showError('Failed to initialize dashboard: ' + error.message);
+        } finally {
+            // Always hide loading overlay
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+            }
         }
 
         // Check for URL actions (e.g. force batch)
+        const isExtensionContext = window.location.protocol === 'chrome-extension:';
         if (!isExtensionContext) {
             this.checkUrlActions();
         }

@@ -25,17 +25,26 @@ const mimeTypes = {
 };
 
 const server = http.createServer((req, res) => {
-    console.log(`${req.method} ${req.url}`);
-
     // Parse URL
-    let filePath = req.url === '/' ? '/index.html' : req.url;
+    let reqUrl = req.url === '/' ? '/index.html' : req.url;
+
+    // Remove query parameters
+    reqUrl = reqUrl.split('?')[0];
+
+    let filePath;
 
     // Handle routes for utils and libs
-    if (filePath.startsWith('/utils/') || filePath.startsWith('/libs/')) {
-        filePath = path.join(__dirname, 'extension', filePath);
+    if (reqUrl.startsWith('/utils/') || reqUrl.startsWith('/libs/')) {
+        // Remove leading slash to ensure path.join works correctly
+        const relativePath = reqUrl.startsWith('/') ? reqUrl.slice(1) : reqUrl;
+        filePath = path.join(__dirname, 'extension', relativePath);
     } else {
-        filePath = path.join(DASHBOARD_DIR, filePath);
+        // Dashboard files
+        const relativePath = reqUrl.startsWith('/') ? reqUrl.slice(1) : reqUrl;
+        filePath = path.join(DASHBOARD_DIR, relativePath);
     }
+
+    console.log(`Request: ${req.url} -> ${filePath}`);
 
     // Get file extension
     const extname = String(path.extname(filePath)).toLowerCase();
@@ -44,6 +53,7 @@ const server = http.createServer((req, res) => {
     // Read and serve file
     fs.readFile(filePath, (error, content) => {
         if (error) {
+            console.error(`Error serving ${filePath}: ${error.code}`);
             if (error.code === 'ENOENT') {
                 res.writeHead(404, { 'Content-Type': 'text/html' });
                 res.end('<h1>404 - File Not Found</h1>', 'utf-8');
