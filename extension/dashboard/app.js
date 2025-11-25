@@ -797,15 +797,25 @@ class DashboardApp {
                     ${isAccept ? '✓' : '✕'}
                 </div>
                 <div class="timeline-content">
-                    <div class="timeline-header">
-                        <span class="site-name">${consent.siteDomain}</span>
-                        <span class="decision-badge ${isAccept ? 'accept' : 'decline'}">
-                            ${isAccept ? 'Accepted' : 'Declined'}
-                        </span>
+                    <div class="timeline-hash-hero">
+                        <div class="hash-label">Terms Hash</div>
+                        <div class="hash-value" title="${consent.termsHash}">${consent.termsHash}</div>
                     </div>
-                    <div class="timeline-meta">
-                        <span class="date">${date}</span>
-                        <span class="hash" title="${consent.termsHash}">Hash: ${consent.termsHash.substring(0, 10)}...</span>
+                    <div class="timeline-details">
+                        <div class="timeline-detail-item">
+                            <span class="detail-label">Website:</span>
+                            <span class="site-name">${consent.siteDomain}</span>
+                        </div>
+                        <div class="timeline-detail-item">
+                            <span class="detail-label">Decision:</span>
+                            <span class="decision-badge ${isAccept ? 'accept' : 'decline'}">
+                                ${isAccept ? '✓ Accepted' : '✕ Declined'}
+                            </span>
+                        </div>
+                        <div class="timeline-detail-item">
+                            <span class="detail-label">Date:</span>
+                            <span class="date">${date}</span>
+                        </div>
                     </div>
                 </div>
             `;
