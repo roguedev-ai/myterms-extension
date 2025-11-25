@@ -11,8 +11,15 @@ echo ""
 
 # Check if Node.js is installed
 if ! command -v node &> /dev/null; then
-    echo "❌ Node.js is not installed. Please install Node.js first."
-    exit 1
+    echo "⚠️  Node.js command not found in PATH."
+    echo "   If you installed it via NVM, it might not be available in this script shell."
+    echo "   Trying to continue anyway (assuming npm works)..."
+    
+    if ! command -v npm &> /dev/null; then
+        echo "❌ npm is also missing. Please ensure Node.js is installed and in your PATH."
+        echo "   Download: https://nodejs.org/"
+        exit 1
+    fi
 fi
 
 echo "✓ Node.js found: $(node --version)"
