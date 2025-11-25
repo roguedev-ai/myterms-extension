@@ -1,16 +1,16 @@
 #!/bin/bash
 
-# MyTerms Extension - Quick Setup Script
-# This script helps you get started with the MyTerms extension quickly
+# MyTerms Extension - Complete Setup Script
+# Sets up the entire development environment
 
 set -e
 
-echo "🛡️  MyTerms Extension - Quick Setup"
-echo "===================================="
+echo "🛡️  MyTerms Extension - Complete Setup"
+echo "========================================"
 echo ""
 
 # Check if Node.js is installed
-if ! command -v node &gt; /dev/null; then
+if ! command -v node &> /dev/null; then
     echo "❌ Node.js is not installed. Please install Node.js first."
     exit 1
 fi
@@ -31,35 +31,83 @@ echo "✓ Contract compiled"
 echo ""
 
 # Run tests
-echo "🧪 Running tests..."
+echo "🧪 Running smart contract tests..."
 npm test
-echo "✓ Tests passed"
+if [ $? -ne 0 ]; then
+    echo "⚠️  Tests failed, but continuing setup..."
+fi
 echo ""
 
-# Generate icons
-echo "🎨 Generating extension icons..."
-node scripts/generate-icons.js
-echo "✓ Icons generated"
+# Generate icons if script exists
+if [ -f "scripts/generate-icons.js" ]; then
+    echo "🎨 Generating extension icons..."
+    node scripts/generate-icons.js
+    echo "✓ Icons generated"
+    echo ""
+fi
+
+# Copy dashboard to extension folder (for extension-mode access)
+echo "📂 Setting up extension dashboard..."
+if [ -d "dashboard" ]; then
+    # Remove old dashboard if exists
+    rm -rf extension/dashboard 2>/dev/null || true
+    
+    # Copy dashboard files
+    cp -r dashboard extension/
+    echo "✓ Dashboard copied to extension/"
+else
+    echo "⚠️  Dashboard folder not found, skipping..."
+fi
 echo ""
 
-# Copy dashboard to extension
-echo "Copying dashboard to extension..."
-cp -r dashboard extension/
-echo "✓ Dashboard copied"
+# Setup environment file
+if [ ! -f ".env" ]; then
+    echo "📝 Setting up environment file..."
+    if [ -f ".env.example" ]; then
+        cp .env.example .env
+        echo "✓ Created .env from .env.example"
+        echo ""
+        echo "⚠️  IMPORTANT: Edit .env and add your configuration!"
+        echo "   - Add your Sepolia RPC URL (or use the default)"
+        echo "   - Add your private key (for testnet only!)"
+        echo "   - Never commit .env to git!"
+    else
+        echo "⚠️  .env.example not found, skipping..."
+    fi
+else
+    echo "✓ .env already exists"
+fi
 echo ""
 
-echo "Setup complete! Load the 'extension' directory in Chrome."
+echo "✅ Setup complete!"
 echo ""
-echo "Next steps:"
-echo "1. Copy .env.example to .env and configure your settings"
-echo "2. Load the extension in Chrome:"
-echo "   - Open chrome://extensions/"
-echo "   - Enable 'Developer mode'"
-echo "   - Click 'Load unpacked'"
-echo "   - Select the 'extension' folder"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "📋 Next Steps:"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
-echo "3. (Optional) Deploy to Sepolia testnet:"
-echo "   npx hardhat run scripts/deploy.js --network sepolia"
+echo "1️⃣  Load Extension in Chrome:"
+echo "   • Open chrome://extensions/"
+echo "   • Enable 'Developer mode'"
+echo "   • Click 'Load unpacked'"
+echo "   • Select the 'extension' folder"
 echo ""
-echo "For more information, see DEVELOPMENT.md and TESTING.md"
+echo "2️⃣  For Local Blockchain Development:"
+echo "   • Run: ./dev-start.sh"
+echo "   • This starts Hardhat node + deploys contract + starts dashboard"
+echo ""
+echo "3️⃣  For Production Dashboard Only:"
+echo "   • Run: npm run dashboard"
+echo " • Opens at http://localhost:8080"
+echo ""
+echo "4️⃣  (Optional) Deploy to Sepolia Testnet:"
+echo "   • Configure .env with your private key"
+echo "   • Run: npx hardhat run scripts/deploy.js --network sepolia"
+echo ""
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "📚 Documentation:"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "   • LOCAL_BLOCKCHAIN.md - Local blockchain setup"
+echo "   • DEVELOPMENT.md - Development guide"
+echo "   • TESTING.md - Testing guide"
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
