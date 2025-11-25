@@ -29,17 +29,20 @@ UI: Plain JS + minimal HTML/CSS (upgradeable to React).
 
 ## Quick Start
 
+> 📖 **New to the project? See [QUICKSTART.md](QUICKSTART.md) for a complete step-by-step guide!**
+
 ### Automated Setup (Recommended)
 ```bash
-# Run the setup script
+# 1. Clone and setup
+git clone https://github.com/roguedev-ai/myterms-extension.git
+cd myterms-extension
 ./setup.sh
-```
 
-This will:
-- Install all dependencies
-- Compile the smart contract
-- Run tests
-- Generate extension icons
+# 2. Load extension in Chrome (see QUICKSTART.md)
+
+# 3. Start local blockchain development
+./dev-start.sh
+```
 
 ### Manual Setup
 
@@ -79,8 +82,9 @@ Connect wallet → view logged consent history.
 
 ## Documentation
 
+- **[QUICKSTART.md](QUICKSTART.md)** - **⭐ Complete beginner's guide** (start here!)
 - **[README.md](README.md)** - This file (overview and quick start)
-- **[LOCAL_BLOCKCHAIN.md](LOCAL_BLOCKCHAIN.md)** - **⭐ Local blockchain setup with Hardhat**
+- **[LOCAL_BLOCKCHAIN.md](LOCAL_BLOCKCHAIN.md)** - Local blockchain setup with Hardhat
 - **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development guide and workflows
 - **[TESTING.md](TESTING.md)** - Comprehensive testing guide
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** - Dual-dashboard architecture
