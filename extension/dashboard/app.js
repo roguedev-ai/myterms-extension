@@ -623,8 +623,34 @@ class DashboardApp {
         } catch (error) {
             console.error('Failed to load data:', error);
             this.refreshBtn.classList.remove('spinning');
-            this.noDataMsg.style.display = 'flex';
-            this.noDataMsg.textContent = 'Failed to load data. Is the extension installed?';
+
+            // Show helpful message based on context
+            if (!this.dataService.isExtensionContext && error.message.includes('timed out')) {
+                // Blockchain dashboard (localhost) with bridge timeout
+                this.noDataMsg.style.display = 'flex';
+                this.noDataMsg.innerHTML = `
+                    <div style="text-align: center; padding: 20px;">
+                        <h3 style="color: #f44336;">⚠️ Connection Issue</h3>
+                        <p>Unable to connect to the MyTerms extension.</p>
+                        <p style="margin-top: 15px;"><strong>Quick fix:</strong></p>
+                        <ol style="text-align: left; display: inline-block; margin: 10px auto;">
+                            <li>Go to <code>chrome://extensions</code></li>
+                            <li>Click reload on "MyTerms"</li>
+                            <li>Refresh this page</li>
+                        </ol>
+                        <p style="margin-top: 15px;">
+                            <a href="${chrome.runtime.getURL('dashboard/index.html')}" 
+                               style="color: #4CAF50; text-decoration: underline;">
+                                Or try the Extension Dashboard →
+                            </a>
+                        </p>
+                    </div>
+                `;
+            } else {
+                // Generic error
+                this.noDataMsg.style.display = 'flex';
+                this.noDataMsg.textContent = 'Failed to load data. Is the extension installed?';
+            }
         }
     }
 
