@@ -9,6 +9,10 @@ echo "🛡️  MyTerms Extension - Complete Setup"
 echo "========================================"
 echo ""
 
+# Try to load NVM if present
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
 # Check if Node.js is installed
 if ! command -v node &> /dev/null; then
     echo "⚠️  Node.js command not found in PATH."
@@ -18,7 +22,8 @@ if ! command -v node &> /dev/null; then
     if ! command -v npm &> /dev/null; then
         echo "❌ npm is also missing. Please ensure Node.js is installed and in your PATH."
         echo "   Download: https://nodejs.org/"
-        exit 1
+        # Don't exit, just warn strongly
+        echo "   ⚠️  Continuing, but commands may fail..."
     fi
 fi
 

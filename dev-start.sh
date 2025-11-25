@@ -18,6 +18,10 @@ echo "🚀 MyTerms Local Blockchain Development"
 echo "========================================"
 echo ""
 
+# Try to load NVM if present
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
 # Check for Node.js
 if ! command -v node &> /dev/null; then
     echo "⚠️  Node.js command not found."
