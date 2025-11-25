@@ -627,6 +627,12 @@ class DashboardApp {
             // Show helpful message based on context
             if (!this.dataService.isExtensionContext && error.message.includes('timed out')) {
                 // Blockchain dashboard (localhost) with bridge timeout
+                const extensionDashboardLink = (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL)
+                    ? `<a href="${chrome.runtime.getURL('dashboard/index.html')}" style="color: #4CAF50; text-decoration: underline;">
+                        Or try the Extension Dashboard →
+                       </a>`
+                    : `<span>Or try opening the Extension Dashboard from chrome://extensions</span>`;
+
                 this.noDataMsg.style.display = 'flex';
                 this.noDataMsg.innerHTML = `
                     <div style="text-align: center; padding: 20px;">
@@ -639,10 +645,7 @@ class DashboardApp {
                             <li>Refresh this page</li>
                         </ol>
                         <p style="margin-top: 15px;">
-                            <a href="${chrome.runtime.getURL('dashboard/index.html')}" 
-                               style="color: #4CAF50; text-decoration: underline;">
-                                Or try the Extension Dashboard →
-                            </a>
+                            ${extensionDashboardLink}
                         </p>
                     </div>
                 `;
