@@ -164,8 +164,20 @@ class DashboardApp {
             // Initialize charts
             this.initCharts();
 
+            // Load preferences into UI
+            await this.loadPreferences();
+
             // Load initial data
             await this.loadData();
+
+            // Explicitly hide overlay on success
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+            }
+            // Mark app as initialized for fallback script
+            window.myTermsAppInitialized = true;
+
         } catch (error) {
             console.error('Dashboard initialization failed:', error);
             // Don't show error modal for import failures, just log them

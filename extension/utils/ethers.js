@@ -340,7 +340,7 @@ class MyTermsEthers {
 
       // Submit transaction with retry for RPC errors
       let tx;
-      const maxRetries = 3;
+      const maxRetries = 5; // Increase retries
 
       for (let i = 0; i < maxRetries; i++) {
         try {
@@ -351,8 +351,10 @@ class MyTermsEthers {
         } catch (err) {
           // Check for RPC rate limit error (-32002)
           if (err.message && err.message.includes('-32002') && i < maxRetries - 1) {
-            console.warn(`RPC rate limited, retrying in 2s (${i + 1}/${maxRetries})...`);
-            await new Promise(r => setTimeout(r, 2000));
+            // MetaMask says "retrying in X minutes", so we need to wait longer
+            const delay = 10000 + (i * 5000); // 10s, 15s, 20s...
+            console.warn(`RPC rate limited, retrying in ${delay / 1000}s (${i + 1}/${maxRetries})...`);
+            await new Promise(r => setTimeout(r, delay));
             continue;
           }
           throw err; // Re-throw other errors
