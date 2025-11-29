@@ -287,7 +287,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   // PREPARE_BATCH - from dashboard
   if (request.type === 'PREPARE_BATCH') {
-    consentManager.prepareConsentBatch()
+    consentManager.prepareConsentBatch(request.force || false)
       .then(data => sendResponse({ success: true, data }))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;

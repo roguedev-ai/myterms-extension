@@ -85,8 +85,8 @@ class DataService {
         }
     }
 
-    async prepareBatch() {
-        const response = await this.request('PREPARE_BATCH');
+    async prepareBatch(force = false) {
+        const response = await this.request('PREPARE_BATCH', { force });
         if (!response.success) throw new Error(response.error);
         return response.data;
     }
@@ -275,8 +275,8 @@ class DashboardApp {
 
             statusMsg.textContent = 'Preparing batch data...';
 
-            // 2. Prepare Batch
-            const batchData = await this.dataService.prepareBatch();
+            // 2. Prepare Batch (Force = true)
+            const batchData = await this.dataService.prepareBatch(true);
 
 
             statusMsg.textContent = `Signing transaction for ${batchData.count} consents...`;
@@ -314,6 +314,19 @@ class DashboardApp {
 
         } catch (error) {
             console.error('Force batch failed:', error);
+
+            // Handle "No pending consents" gracefully
+            if (error.message.includes('No pending consents')) {
+                const overlay = document.getElementById('loadingOverlay');
+                const statusMsg = document.getElementById('batchStatusMsg');
+                if (statusMsg) statusMsg.textContent = 'No consents to batch.';
+
+                setTimeout(() => {
+                    overlay.classList.add('hidden');
+                    alert('No pending consents found to batch. Visit some websites first!');
+                }, 1500);
+                return;
+            }
 
             // Check if it's a network error
             if (error.message.includes('Please switch your wallet')) {
