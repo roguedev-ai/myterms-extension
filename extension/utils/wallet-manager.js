@@ -183,6 +183,7 @@ class WalletManager {
       }
 
       const provider = new ethers.BrowserProvider(window.ethereum);
+      provider.pollingInterval = 60000; // Reduce polling frequency to avoid rate limits
       const signer = await provider.getSigner();
       const network = await provider.getNetwork();
 
@@ -262,6 +263,7 @@ class WalletManager {
       }
 
       const provider = new ethers.BrowserProvider(window.ethereum);
+      provider.pollingInterval = 60000; // Reduce polling frequency to avoid rate limits
       const signer = await provider.getSigner();
       const network = await provider.getNetwork();
 
