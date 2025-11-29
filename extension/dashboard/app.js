@@ -170,16 +170,39 @@ class DashboardApp {
     }
 
     disableWalletFeatures() {
+        const isExtensionContext = window.location.protocol === 'chrome-extension:';
+
         // Replace wallet status area with info message
         const walletStatus = document.getElementById('walletStatus');
         if (walletStatus) {
-            walletStatus.innerHTML = `
-                <div style="background: rgba(251, 191, 36, 0.2); padding: 10px; border-radius: 8px; text-align: center;">
-                    <p style="margin: 0; font-size: 13px; color: #fbbf24;">
-                        ℹ️ To connect wallet and submit batches, use the extension popup (click the extension icon)
-                    </p>
-                </div>
-            `;
+            if (isExtensionContext) {
+                // In extension: direct to popup for wallet features
+                walletStatus.innerHTML = `
+                    <div style="background: rgba(251, 191, 36, 0.2); padding: 10px; border-radius: 8px; text-align: center;">
+                        <p style="margin: 0; font-size: 13px; color: #fbbf24;">
+                            ℹ️ To connect wallet and submit batches, use the extension popup (click the extension icon)
+                        </p>
+                    </div>
+                `;
+            } else {
+                // On localhost: blockchain is disabled, direct to preferences
+                walletStatus.innerHTML = `
+                    <div style="background: rgba(59, 130, 246, 0.2); padding: 12px; border-radius: 8px; text-align: center;">
+                        <p style="margin: 0 0 8px 0; font-size: 14px; color: #3b82f6; font-weight: 600;">
+                            🔒 Blockchain Features Disabled
+                        </p>
+                        <p style="margin: 0; font-size: 12px; color: #3b82f6;">
+                            Enable blockchain in <a href="#" onclick="document.querySelector('[data-view=preferences]').click(); return false;" style="color: #3b82f6; text-decoration: underline; font-weight: bold;">Preferences</a> to connect wallet and submit batches
+                        </p>
+                    </div>
+                `;
+            }
+        }
+
+        // Hide force batch button if it exists
+        const forceBatchBtn = document.getElementById('forceBatchButton');
+        if (forceBatchBtn) {
+            forceBatchBtn.style.display = 'none';
         }
     }
 
