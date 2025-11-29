@@ -338,10 +338,26 @@ class MyTermsEthers {
 
       console.log('Estimated gas:', gasEstimate.toString());
 
-      // Submit transaction
-      const tx = await this.contract.logConsentBatch(siteDomains, termsHashes, {
-        gasLimit: gasEstimate * BigInt(120) / BigInt(100) // Add 20% buffer
-      });
+      // Submit transaction with retry for RPC errors
+      let tx;
+      const maxRetries = 3;
+
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          tx = await this.contract.logConsentBatch(siteDomains, termsHashes, {
+            gasLimit: gasEstimate * BigInt(120) / BigInt(100) // Add 20% buffer
+          });
+          break; // Success
+        } catch (err) {
+          // Check for RPC rate limit error (-32002)
+          if (err.message && err.message.includes('-32002') && i < maxRetries - 1) {
+            console.warn(`RPC rate limited, retrying in 2s (${i + 1}/${maxRetries})...`);
+            await new Promise(r => setTimeout(r, 2000));
+            continue;
+          }
+          throw err; // Re-throw other errors
+        }
+      }
 
       console.log('Transaction submitted:', tx.hash);
 

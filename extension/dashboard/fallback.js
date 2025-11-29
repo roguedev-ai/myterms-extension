@@ -4,7 +4,7 @@
 setTimeout(function () {
     const overlay = document.getElementById('loadingOverlay');
     if (overlay && !overlay.classList.contains('hidden')) {
-        console.warn('Dashboard failed to initialize within 3 seconds (Safety Net), hiding overlay');
+        console.warn('Dashboard failed to initialize within 5 seconds (Safety Net), hiding overlay');
         overlay.classList.add('hidden');
 
         // Also show a visible error if app hasn't loaded
@@ -19,4 +19,4 @@ setTimeout(function () {
             `;
         }
     }
-}, 3000);
+}, 5000);
