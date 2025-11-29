@@ -124,11 +124,23 @@ class DashboardApp {
             // Check if we're in extension context (chrome-extension://)
             const isExtensionContext = window.location.protocol === 'chrome-extension:';
 
-            if (isExtensionContext) {
-                // Hide wallet-dependent features in extension context
-                this.disableWalletFeatures();
-            } else {
+            // Check user preferences to see if blockchain is enabled
+            let blockchainEnabled = false;
+            try {
+                const prefs = await this.dataService.getPreferences();
+                blockchainEnabled = prefs?.blockchainEnabled || false;
+                console.log('Blockchain enabled in preferences:', blockchainEnabled);
+            } catch (error) {
+                console.warn('Could not load preferences, defaulting blockchain to disabled:', error);
+            }
+
+            // Only initialize wallet features if blockchain is explicitly enabled
+            if (blockchainEnabled && !isExtensionContext) {
+                console.log('Initializing wallet features...');
                 this.checkWalletConnection();
+            } else {
+                console.log('Blockchain disabled or extension context - hiding wallet features');
+                this.disableWalletFeatures();
             }
 
             // Initialize charts
@@ -138,7 +150,10 @@ class DashboardApp {
             await this.loadData();
         } catch (error) {
             console.error('Dashboard initialization failed:', error);
-            this.showError('Failed to initialize dashboard: ' + error.message);
+            // Don't show error modal for import failures, just log them
+            if (!error.message.includes('Failed to fetch')) {
+                this.showError('Failed to initialize dashboard: ' + error.message);
+            }
         } finally {
             // Always hide loading overlay
             const overlay = document.getElementById('loadingOverlay');
@@ -147,7 +162,7 @@ class DashboardApp {
             }
         }
 
-        // Check for URL actions (e.g. force batch)
+        // Check for URL actions (e.g. force batch) - only if blockchain enabled
         const isExtensionContext = window.location.protocol === 'chrome-extension:';
         if (!isExtensionContext) {
             this.checkUrlActions();
