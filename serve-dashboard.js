@@ -53,7 +53,14 @@ const server = http.createServer((req, res) => {
     // Read and serve file
     fs.readFile(filePath, (error, content) => {
         if (error) {
-            console.error(`Error serving ${filePath}: ${error.code}`);
+            // Don't log expected 404s for map files or favicons to reduce noise
+            if (!filePath.endsWith('.map') && !filePath.endsWith('favicon.ico')) {
+                console.error(`[ERROR] Failed to serve file:`);
+                console.error(`  URL: ${req.url}`);
+                console.error(`  Target Path: ${filePath}`);
+                console.error(`  Error Code: ${error.code}`);
+            }
+
             if (error.code === 'ENOENT') {
                 res.writeHead(404, { 'Content-Type': 'text/html' });
                 res.end('<h1>404 - File Not Found</h1>', 'utf-8');
