@@ -288,16 +288,7 @@
     <!-- External Libraries -->
     <script src="../libs/chart.js"></script>
 
-    <!-- Fallback: Hide loading overlay after 3 seconds if app.js fails to load -->
-    <script>
-        setTimeout(function () {
-            const overlay = document.getElementById('loadingOverlay');
-            if (overlay && !overlay.classList.contains('hidden')) {
-                console.warn('Dashboard failed to initialize within 3 seconds, hiding overlay');
-                overlay.classList.add('hidden');
-            }
-        }, 3000);
-    </script>
+
 
     <script type="module" src="app.js"></script>
 </body>
