@@ -520,6 +520,8 @@ class DashboardApp {
     }
 
     async checkWalletConnection() {
+        // Immediately show Connect Wallet button (will be replaced if wallet is already connected)
+        this.updateWalletUI(null);
 
         // Wait for wallet manager to init
         setTimeout(async () => {
@@ -608,6 +610,7 @@ class DashboardApp {
 
     updateWalletUI(wallet) {
         if (wallet && wallet.account) {
+            // Wallet IS connected - show wallet info + Force Batch button
             const shortAddr = `${wallet.account.substring(0, 6)}...${wallet.account.substring(38)}`;
             this.walletStatus.className = 'wallet-status connected';
             this.walletStatus.innerHTML = `
@@ -624,20 +627,16 @@ class DashboardApp {
 
             if (this.connectBtn) this.connectBtn.style.display = 'none';
         } else {
+            // Wallet NOT connected - only show Connect Wallet button
             this.walletStatus.className = 'wallet-status';
             this.walletStatus.innerHTML = `
-                <button class="connect-btn" id="forceBatchButton" style="margin-right: 10px; background: rgba(255, 255, 255, 0.1);">
-                    ⚡ Force Batch
-                </button>
                 <button class="connect-btn" id="connectButton">
                     🔗 Connect Wallet
                 </button>
             `;
-            // Re-attach listeners since we replaced innerHTML
+            // Re-attach listener
             document.getElementById('connectButton').addEventListener('click', () => this.connectWallet());
-            document.getElementById('forceBatchButton').addEventListener('click', () => this.handleForceBatchAction());
             this.connectBtn = document.getElementById('connectButton');
-            this.forceBatchBtn = document.getElementById('forceBatchButton');
         }
     }
 
