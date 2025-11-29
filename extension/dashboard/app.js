@@ -124,14 +124,32 @@ class DashboardApp {
             // Check if we're in extension context (chrome-extension://)
             const isExtensionContext = window.location.protocol === 'chrome-extension:';
 
-            // Check user preferences to see if blockchain is enabled
-            let blockchainEnabled = false;
+            // Check user preferences with retries to handle bridge race conditions
+            let blockchainEnabled = true; // Default to TRUE (Fail-Open) to prevent lockout
+
             try {
-                const prefs = await this.dataService.getPreferences();
-                blockchainEnabled = prefs?.blockchainEnabled || false;
+                // Simple retry helper
+                const getPrefsWithRetry = async (retries = 3, delay = 1000) => {
+                    for (let i = 0; i < retries; i++) {
+                        try {
+                            return await this.dataService.getPreferences();
+                        } catch (err) {
+                            if (i === retries - 1) throw err;
+                            console.log(`Bridge not ready, retrying init (${i + 1}/${retries})...`);
+                            await new Promise(r => setTimeout(r, delay));
+                        }
+                    }
+                };
+
+                const prefs = await getPrefsWithRetry();
+                // Only disable if explicitly set to false in prefs
+                if (prefs && typeof prefs.blockchainEnabled !== 'undefined') {
+                    blockchainEnabled = prefs.blockchainEnabled;
+                }
                 console.log('Blockchain enabled in preferences:', blockchainEnabled);
             } catch (error) {
-                console.warn('Could not load preferences, defaulting blockchain to disabled:', error);
+                console.warn('Could not load preferences after retries, defaulting to ENABLED to ensure access:', error);
+                // We keep blockchainEnabled = true here so the UI shows up
             }
 
             // Only initialize wallet features if blockchain is explicitly enabled
