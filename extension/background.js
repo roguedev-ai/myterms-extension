@@ -345,7 +345,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 chrome.notifications.onClicked.addListener((notificationId) => {
   // Open dashboard to sign batch
   // Use localhost to allow wallet injection
-  const dashboardUrl = 'http://localhost:8000/dashboard/index.html?action=forceBatch';
+  const dashboardUrl = 'http://localhost:8080/dashboard/index.html?action=forceBatch';
   chrome.tabs.create({ url: dashboardUrl });
   chrome.notifications.clear(notificationId);
 });

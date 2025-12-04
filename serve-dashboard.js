@@ -46,6 +46,10 @@ const server = http.createServer((req, res) => {
         } else {
             filePath = path.join(__dirname, 'extension', relativePath);
         }
+        console.log(`[DEBUG] Request: ${reqUrl} -> Resolved: ${filePath}`);
+        if (!fs.existsSync(filePath)) {
+            console.error(`[ERROR] File not found: ${filePath}`);
+        }
     } else {
         // Dashboard files
         const relativePath = reqUrl.startsWith('/') ? reqUrl.slice(1) : reqUrl;
