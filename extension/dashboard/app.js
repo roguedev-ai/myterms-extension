@@ -85,8 +85,8 @@ class DataService {
         }
     }
 
-    async prepareBatch(force = false) {
-        const response = await this.request('PREPARE_BATCH', { force });
+    async prepareBatch() {
+        const response = await this.request('PREPARE_BATCH');
         if (!response.success) throw new Error(response.error);
         return response.data;
     }
@@ -124,66 +124,21 @@ class DashboardApp {
             // Check if we're in extension context (chrome-extension://)
             const isExtensionContext = window.location.protocol === 'chrome-extension:';
 
-            // Check user preferences with retries to handle bridge race conditions
-            let blockchainEnabled = true; // Default to TRUE (Fail-Open) to prevent lockout
-
-            try {
-                // Simple retry helper
-                const getPrefsWithRetry = async (retries = 3, delay = 1000) => {
-                    for (let i = 0; i < retries; i++) {
-                        try {
-                            return await this.dataService.getPreferences();
-                        } catch (err) {
-                            if (i === retries - 1) throw err;
-                            console.log(`Bridge not ready, retrying init (${i + 1}/${retries})...`);
-                            await new Promise(r => setTimeout(r, delay));
-                        }
-                    }
-                };
-
-                const prefs = await getPrefsWithRetry();
-                // Only disable if explicitly set to false in prefs
-                if (prefs && typeof prefs.blockchainEnabled !== 'undefined') {
-                    blockchainEnabled = prefs.blockchainEnabled;
-                }
-                console.log('Blockchain enabled in preferences:', blockchainEnabled);
-            } catch (error) {
-                console.warn('Could not load preferences after retries, defaulting to ENABLED to ensure access:', error);
-                // We keep blockchainEnabled = true here so the UI shows up
-            }
-
-            // Only initialize wallet features if blockchain is explicitly enabled
-            if (blockchainEnabled && !isExtensionContext) {
-                console.log('Initializing wallet features...');
-                this.checkWalletConnection();
-            } else {
-                console.log('Blockchain disabled or extension context - hiding wallet features');
+            if (isExtensionContext) {
+                // Hide wallet-dependent features in extension context
                 this.disableWalletFeatures();
+            } else {
+                this.checkWalletConnection();
             }
 
             // Initialize charts
             this.initCharts();
 
-            // Load preferences into UI
-            await this.loadPreferences();
-
             // Load initial data
             await this.loadData();
-
-            // Explicitly hide overlay on success
-            const overlay = document.getElementById('loadingOverlay');
-            if (overlay) {
-                overlay.classList.add('hidden');
-            }
-            // Mark app as initialized for fallback script
-            window.myTermsAppInitialized = true;
-
         } catch (error) {
             console.error('Dashboard initialization failed:', error);
-            // Don't show error modal for import failures, just log them
-            if (!error.message.includes('Failed to fetch')) {
-                this.showError('Failed to initialize dashboard: ' + error.message);
-            }
+            this.showError('Failed to initialize dashboard: ' + error.message);
         } finally {
             // Always hide loading overlay
             const overlay = document.getElementById('loadingOverlay');
@@ -192,7 +147,7 @@ class DashboardApp {
             }
         }
 
-        // Check for URL actions (e.g. force batch) - only if blockchain enabled
+        // Check for URL actions (e.g. force batch)
         const isExtensionContext = window.location.protocol === 'chrome-extension:';
         if (!isExtensionContext) {
             this.checkUrlActions();
@@ -200,39 +155,16 @@ class DashboardApp {
     }
 
     disableWalletFeatures() {
-        const isExtensionContext = window.location.protocol === 'chrome-extension:';
-
         // Replace wallet status area with info message
         const walletStatus = document.getElementById('walletStatus');
         if (walletStatus) {
-            if (isExtensionContext) {
-                // In extension: direct to popup for wallet features
-                walletStatus.innerHTML = `
-                    <div style="background: rgba(251, 191, 36, 0.2); padding: 10px; border-radius: 8px; text-align: center;">
-                        <p style="margin: 0; font-size: 13px; color: #fbbf24;">
-                            ℹ️ To connect wallet and submit batches, use the extension popup (click the extension icon)
-                        </p>
-                    </div>
-                `;
-            } else {
-                // On localhost: blockchain is disabled, direct to preferences
-                walletStatus.innerHTML = `
-                    <div style="background: rgba(59, 130, 246, 0.2); padding: 12px; border-radius: 8px; text-align: center;">
-                        <p style="margin: 0 0 8px 0; font-size: 14px; color: #3b82f6; font-weight: 600;">
-                            🔒 Blockchain Features Disabled
-                        </p>
-                        <p style="margin: 0; font-size: 12px; color: #3b82f6;">
-                            Enable blockchain in <a href="#" onclick="document.querySelector('[data-view=preferences]').click(); return false;" style="color: #3b82f6; text-decoration: underline; font-weight: bold;">Preferences</a> to connect wallet and submit batches
-                        </p>
-                    </div>
-                `;
-            }
-        }
-
-        // Hide force batch button if it exists
-        const forceBatchBtn = document.getElementById('forceBatchButton');
-        if (forceBatchBtn) {
-            forceBatchBtn.style.display = 'none';
+            walletStatus.innerHTML = `
+                <div style="background: rgba(251, 191, 36, 0.2); padding: 10px; border-radius: 8px; text-align: center;">
+                    <p style="margin: 0; font-size: 13px; color: #fbbf24;">
+                        ℹ️ To connect wallet and submit batches, use the extension popup (click the extension icon)
+                    </p>
+                </div>
+            `;
         }
     }
 
@@ -287,8 +219,8 @@ class DashboardApp {
 
             statusMsg.textContent = 'Preparing batch data...';
 
-            // 2. Prepare Batch (Force = true)
-            const batchData = await this.dataService.prepareBatch(true);
+            // 2. Prepare Batch
+            const batchData = await this.dataService.prepareBatch();
 
 
             statusMsg.textContent = `Signing transaction for ${batchData.count} consents...`;
@@ -326,19 +258,6 @@ class DashboardApp {
 
         } catch (error) {
             console.error('Force batch failed:', error);
-
-            // Handle "No pending consents" gracefully
-            if (error.message.includes('No pending consents')) {
-                const overlay = document.getElementById('loadingOverlay');
-                const statusMsg = document.getElementById('batchStatusMsg');
-                if (statusMsg) statusMsg.textContent = 'No consents to batch.';
-
-                setTimeout(() => {
-                    overlay.classList.add('hidden');
-                    alert('No pending consents found to batch. Visit some websites first!');
-                }, 1500);
-                return;
-            }
 
             // Check if it's a network error
             if (error.message.includes('Please switch your wallet')) {
@@ -563,8 +482,6 @@ class DashboardApp {
     }
 
     async checkWalletConnection() {
-        // Immediately show Connect Wallet button (will be replaced if wallet is already connected)
-        this.updateWalletUI(null);
 
         // Wait for wallet manager to init
         setTimeout(async () => {
@@ -653,7 +570,6 @@ class DashboardApp {
 
     updateWalletUI(wallet) {
         if (wallet && wallet.account) {
-            // Wallet IS connected - show wallet info + Force Batch button
             const shortAddr = `${wallet.account.substring(0, 6)}...${wallet.account.substring(38)}`;
             this.walletStatus.className = 'wallet-status connected';
             this.walletStatus.innerHTML = `
@@ -670,16 +586,20 @@ class DashboardApp {
 
             if (this.connectBtn) this.connectBtn.style.display = 'none';
         } else {
-            // Wallet NOT connected - only show Connect Wallet button
             this.walletStatus.className = 'wallet-status';
             this.walletStatus.innerHTML = `
+                <button class="connect-btn" id="forceBatchButton" style="margin-right: 10px; background: rgba(255, 255, 255, 0.1);">
+                    ⚡ Force Batch
+                </button>
                 <button class="connect-btn" id="connectButton">
                     🔗 Connect Wallet
                 </button>
             `;
-            // Re-attach listener
+            // Re-attach listeners since we replaced innerHTML
             document.getElementById('connectButton').addEventListener('click', () => this.connectWallet());
+            document.getElementById('forceBatchButton').addEventListener('click', () => this.handleForceBatchAction());
             this.connectBtn = document.getElementById('connectButton');
+            this.forceBatchBtn = document.getElementById('forceBatchButton');
         }
     }
 
