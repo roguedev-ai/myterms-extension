@@ -75,8 +75,10 @@ class ConsentStorage {
 
   // Add consent to queue
   async addToQueue(consentData) {
+    console.log('Storage: addToQueue called for', consentData.siteDomain);
     try {
       const db = await this.waitForDB();
+      console.log('Storage: DB ready for write');
       const transaction = db.transaction([CONSENT_STORE], 'readwrite');
       const store = transaction.objectStore(CONSENT_STORE);
 
