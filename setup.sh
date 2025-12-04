@@ -9,17 +9,20 @@ echo "========================================"
 if [ "$EUID" -eq 0 ]; then
   echo "❌ WARNING: You are running as root (sudo)."
   echo "   This usually breaks NVM/Node.js detection."
-  echo "   Please run without sudo: ./setup.sh"
-  echo ""
-  read -p "   Press Enter to continue anyway (or Ctrl+C to stop)..."
+  echo "   If this script fails, please try running without sudo: ./setup.sh"
+  echo "   Continuing in 3 seconds..."
+  sleep 3
 fi
 
-# 1. Try to load environment
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # Load NVM
-[ -s "$HOME/.bashrc" ] && source "$HOME/.bashrc"  # Load bashrc
+# 1. Check for Node (Try system node first)
+if ! command -v node &> /dev/null; then
+    # Only try to load NVM if node is not found
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # Load NVM
+    [ -s "$HOME/.bashrc" ] && source "$HOME/.bashrc"  # Load bashrc
+fi
 
-# 2. Check for Node
+# 2. Check for Node again
 if ! command -v node &> /dev/null; then
     echo ""
     echo "❌ Error: 'node' command still not found."
@@ -39,6 +42,24 @@ if ! command -v node &> /dev/null; then
 fi
 
 echo "✓ Using Node: $(node --version)"
+
+# Check for root-owned node_modules
+if [ -d "node_modules" ] && [ "$EUID" -ne 0 ]; then
+    OWNER=$(stat -c '%U' node_modules)
+    if [ "$OWNER" = "root" ]; then
+        echo ""
+        echo "❌ WARNING: 'node_modules' is owned by root!"
+        echo "   This likely happened because you ran 'sudo npm install' previously."
+        echo "   This will cause permission errors."
+        echo ""
+        echo "   To fix, run:"
+        echo "   sudo chown -R $(whoami) node_modules"
+        echo ""
+        read -p "   Press Enter to attempt fix automatically (or Ctrl+C to stop)..."
+        sudo chown -R $(whoami) node_modules
+        echo "   ✓ Fixed permissions."
+    fi
+fi
 
 # 3. Run Setup Steps
 echo ""
