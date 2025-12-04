@@ -121,6 +121,9 @@ class DashboardApp {
             this.initElements();
             this.attachEventListeners();
 
+            // Load preferences first to determine if we should connect
+            await this.loadPreferences();
+
             // Check if we're in extension context (chrome-extension://)
             const isExtensionContext = window.location.protocol === 'chrome-extension:';
 
@@ -128,7 +131,13 @@ class DashboardApp {
                 // Hide wallet-dependent features in extension context
                 this.disableWalletFeatures();
             } else {
-                this.checkWalletConnection();
+                // Only connect if enabled in preferences
+                if (this.prefs.blockchainEnabled.checked) {
+                    this.checkWalletConnection();
+                } else {
+                    console.log('Blockchain features disabled by user preference.');
+                    this.updateWalletUI(null);
+                }
             }
 
             // Initialize charts
@@ -539,6 +548,19 @@ class DashboardApp {
                 this.saveStatus.textContent = '';
                 this.saveStatus.className = 'save-status';
             }, 2000);
+
+            // Handle blockchain toggle
+            if (newPrefs.blockchainEnabled) {
+                if (!walletManager.getConnectedWallet()) {
+                    this.checkWalletConnection();
+                }
+            } else {
+                // If disabled, we don't necessarily disconnect (user might want to keep wallet connected for other things)
+                // But we should update UI to reflect that features are disabled if we want to be strict.
+                // For now, let's just stop auto-connecting on reload (which is handled by init).
+                // If the user explicitly disables it, maybe we should clear the blockchain data from view?
+                console.log('Blockchain features disabled.');
+            }
 
         } catch (error) {
             console.error('Failed to save preferences:', error);
