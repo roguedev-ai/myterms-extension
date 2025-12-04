@@ -33,11 +33,19 @@ const server = http.createServer((req, res) => {
 
     let filePath;
 
-    // Handle routes for utils and libs
-    if (reqUrl.startsWith('/utils/') || reqUrl.startsWith('/libs/')) {
+    // Handle routes for utils, libs, and extension files
+    if (reqUrl.startsWith('/utils/') || reqUrl.startsWith('/libs/') || reqUrl.startsWith('/extension/')) {
         // Remove leading slash to ensure path.join works correctly
         const relativePath = reqUrl.startsWith('/') ? reqUrl.slice(1) : reqUrl;
-        filePath = path.join(__dirname, 'extension', relativePath);
+        // If it starts with extension/, we don't need to add 'extension' again if we are relative to root
+        // But wait, __dirname is root. 
+        // If req is /extension/utils/foo.js -> path.join(root, 'extension/utils/foo.js') which is wrong if we add 'extension' again.
+
+        if (reqUrl.startsWith('/extension/')) {
+            filePath = path.join(__dirname, relativePath);
+        } else {
+            filePath = path.join(__dirname, 'extension', relativePath);
+        }
     } else {
         // Dashboard files
         const relativePath = reqUrl.startsWith('/') ? reqUrl.slice(1) : reqUrl;

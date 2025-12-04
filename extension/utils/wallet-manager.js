@@ -161,7 +161,8 @@ class WalletManager {
     // Check for any injected provider (window.ethereum)
     // We poll briefly to handle race conditions where the provider is injected asynchronously
     if (!window.ethereum) {
-      for (let i = 0; i < 30; i++) {
+      // Increase timeout to 10 seconds (100 * 100ms) for slower remote connections
+      for (let i = 0; i < 100; i++) {
         if (window.ethereum) {
           break;
         }
