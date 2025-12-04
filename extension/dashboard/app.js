@@ -131,7 +131,10 @@ class DashboardApp {
                 // Hide wallet-dependent features in extension context
                 this.disableWalletFeatures();
             } else {
-                // Only connect if enabled in preferences
+                // Always setup listeners so manual connection updates UI
+                this.setupWalletListeners();
+
+                // Only auto-connect if enabled in preferences
                 if (this.prefs.blockchainEnabled.checked) {
                     this.checkWalletConnection();
                 } else {
@@ -490,8 +493,16 @@ class DashboardApp {
         }
     }
 
-    async checkWalletConnection() {
+    setupWalletListeners() {
+        walletManager.onWalletChange((wallet) => {
+            console.log('Wallet changed:', wallet);
+            this.updateWalletUI(wallet);
+            if (wallet) this.loadData(); // Reload with blockchain data
+            else this.clearBlockchainData(); // Keep local data
+        });
+    }
 
+    async checkWalletConnection() {
         // Wait for wallet manager to init
         setTimeout(async () => {
             const wallet = walletManager.getConnectedWallet();
@@ -501,12 +512,6 @@ class DashboardApp {
                 this.loadData();
             }
         }, 1000);
-
-        walletManager.onWalletChange((wallet) => {
-            this.updateWalletUI(wallet);
-            if (wallet) this.loadData(); // Reload with blockchain data
-            else this.clearBlockchainData(); // Keep local data
-        });
     }
 
     async loadPreferences() {
