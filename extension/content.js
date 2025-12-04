@@ -87,6 +87,10 @@ class EnhancedBannerDetector {
       // Filter for our specific message type
       if (event.data.type === 'MYTERMS_WEB_REQ') {
         console.log('Bridge: Received request from web:', event.data.payload, 'Origin:', event.origin, 'RequestID:', event.data.requestId);
+        // Explicitly log the payload details to debug pagination
+        if (event.data.payload.type === 'GET_CONSENT_DATA') {
+          console.log('Bridge: GET_CONSENT_DATA payload:', JSON.stringify(event.data.payload));
+        }
 
         try {
           // Forward to background script
