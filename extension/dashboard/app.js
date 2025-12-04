@@ -65,24 +65,30 @@ class DataService {
     }
 
     // Specific API methods
-    async getConsentData() {
+    async getConsentData(limit = 50, offset = 0) {
         // For direct mode, we can use storage directly for speed, or go through message passing
         // To keep it unified, we'll use message passing for both if possible, 
         // but the original code used direct storage access for 'loadData'.
         // Let's try to use the 'GET_CONSENT_DATA' message we saw in background.js
         try {
-            const response = await this.request('GET_CONSENT_DATA');
+            const response = await this.request('GET_CONSENT_DATA', { limit, offset });
             if (response.error) throw new Error(response.error);
             return response;
         } catch (e) {
             console.warn('Failed to get data via message, falling back to direct storage if available', e);
             if (this.isExtensionContext) {
-                const consents = await consentStorage.getAllQueuedConsents();
+                const consents = await consentStorage.getConsents(limit, offset);
                 const batches = await consentStorage.getBatchStats();
                 return { consents, batches };
             }
             throw e;
         }
+    }
+
+    async clearData() {
+        const response = await this.request('CLEAR_CONSENTS');
+        if (!response.success) throw new Error(response.error);
+        return response;
     }
 
     async prepareBatch() {
@@ -431,9 +437,16 @@ class DashboardApp {
         // Refresh
         this.refreshBtn.addEventListener('click', () => this.loadData());
         this.retryBtn.addEventListener('click', () => this.loadData());
+        this.loadMoreBtn.addEventListener('click', () => this.loadMore());
 
         // Preferences
         this.savePreferencesBtn.addEventListener('click', () => this.savePreferences());
+
+        // Clear Data
+        const clearBtn = document.getElementById('clearDataBtn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => this.handleClearData());
+        }
 
         // Network Switching
         const networkSelect = document.getElementById('networkSelect');
@@ -574,6 +587,48 @@ class DashboardApp {
         }
     }
 
+    async handleClearData() {
+        if (!confirm('Are you sure you want to delete ALL consent history? This cannot be undone.')) {
+            return;
+        }
+
+        try {
+            await this.dataService.clearData();
+            alert('All data cleared successfully.');
+            this.loadData(); // Refresh view
+        } catch (error) {
+            console.error('Failed to clear data:', error);
+            alert('Failed to clear data: ' + error.message);
+        }
+    }
+
+    async loadMore() {
+        try {
+            this.loadMoreBtn.classList.add('loading');
+            this.loadMoreBtn.textContent = 'Loading...';
+
+            // Calculate current offset based on displayed items
+            const currentCount = document.querySelectorAll('.timeline-item').length;
+
+            const data = await this.dataService.getConsentData(50, currentCount);
+
+            if (data.consents && data.consents.length > 0) {
+                this.renderTimeline(data.consents, true); // true = append
+            } else {
+                this.loadMoreBtn.textContent = 'No more events';
+                this.loadMoreBtn.disabled = true;
+            }
+
+            this.loadMoreBtn.classList.remove('loading');
+            if (!this.loadMoreBtn.disabled) this.loadMoreBtn.textContent = 'Load More Events';
+
+        } catch (error) {
+            console.error('Failed to load more:', error);
+            this.loadMoreBtn.textContent = 'Error loading more';
+            this.loadMoreBtn.classList.remove('loading');
+        }
+    }
+
     // Wallet Connection
     async connectWallet() {
         try {
@@ -641,8 +696,8 @@ class DashboardApp {
         try {
             this.refreshBtn.classList.add('spinning');
 
-            // Get data from service
-            const data = await this.dataService.getConsentData();
+            // Get data from service (limit 50 for initial load)
+            const data = await this.dataService.getConsentData(50, 0);
 
             this.processData(data.consents, data.batches);
 
@@ -806,8 +861,10 @@ class DashboardApp {
     // ... (renderTimeline, renderSites, initCharts, updateCharts, clearData methods remain same)
 
     // Helper to keep existing methods intact while replacing the block
-    renderTimeline(consents) {
-        this.timelineTimeline.innerHTML = '';
+    renderTimeline(consents, append = false) {
+        if (!append) {
+            this.timelineTimeline.innerHTML = '';
+        }
 
         // Sort by timestamp desc
         const sorted = [...consents].sort((a, b) => b.timestamp - a.timestamp);

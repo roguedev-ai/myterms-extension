@@ -142,6 +142,76 @@ class ConsentStorage {
     }
   }
 
+  // Get paginated consents
+  async getConsents(limit = 50, offset = 0) {
+    try {
+      const db = await this.waitForDB();
+      const transaction = db.transaction([CONSENT_STORE], 'readonly');
+      const store = transaction.objectStore(CONSENT_STORE);
+      // Use index to sort by timestamp descending
+      const index = store.index('timestamp');
+
+      return new Promise((resolve, reject) => {
+        const request = index.openCursor(null, 'prev'); // 'prev' for descending order
+        const results = [];
+        let hasAdvanced = false;
+        let count = 0;
+
+        request.onsuccess = (event) => {
+          const cursor = event.target.result;
+
+          if (!cursor) {
+            resolve(results);
+            return;
+          }
+
+          // Handle offset
+          if (offset > 0 && !hasAdvanced) {
+            hasAdvanced = true;
+            cursor.advance(offset);
+            return;
+          }
+
+          // Collect items up to limit
+          if (count < limit) {
+            results.push(cursor.value);
+            count++;
+            cursor.continue();
+          } else {
+            resolve(results);
+          }
+        };
+
+        request.onerror = (event) => reject(event.target.error);
+        transaction.onerror = (event) => reject(event.target.error);
+      });
+    } catch (error) {
+      console.error('Error getting paginated consents:', error);
+      throw error;
+    }
+  }
+
+  // Clear all consents (Emergency Cleanup)
+  async clearAllConsents() {
+    try {
+      const db = await this.waitForDB();
+      const transaction = db.transaction([CONSENT_STORE], 'readwrite');
+      const store = transaction.objectStore(CONSENT_STORE);
+
+      return new Promise((resolve, reject) => {
+        const request = store.clear();
+        request.onsuccess = () => {
+          console.log('All consents cleared');
+          resolve();
+        };
+        request.onerror = (event) => reject(event.target.error);
+      });
+    } catch (error) {
+      console.error('Error clearing all consents:', error);
+      throw error;
+    }
+  }
+
   // Get all consents in queue (for popup display)
   async getAllQueuedConsents() {
     try {

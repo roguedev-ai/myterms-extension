@@ -269,9 +269,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   // GET_CONSENT_DATA - from dashboard
   if (request.type === 'GET_CONSENT_DATA') {
-    console.log('Background: Received GET_CONSENT_DATA request');
+    const limit = request.limit || 50;
+    const offset = request.offset || 0;
+    console.log(`Background: Received GET_CONSENT_DATA request (limit: ${limit}, offset: ${offset})`);
+
     Promise.all([
-      consentStorage.getAllQueuedConsents(),
+      consentStorage.getConsents(limit, offset),
       consentStorage.getBatchStats()
     ])
       .then(([consents, batches]) => {
@@ -282,6 +285,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         console.error('Background: Error getting consent data:', error);
         sendResponse({ consents: [], batches: null, error: error.message });
       });
+    return true;
+  }
+
+  // CLEAR_CONSENTS - from dashboard
+  if (request.type === 'CLEAR_CONSENTS') {
+    console.log('Background: Received CLEAR_CONSENTS request');
+    consentStorage.clearAllConsents()
+      .then(() => sendResponse({ success: true }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
   }
 
