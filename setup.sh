@@ -43,20 +43,31 @@ fi
 
 echo "✓ Using Node: $(node --version)"
 
-# Check for root-owned node_modules
-if [ -d "node_modules" ] && [ "$EUID" -ne 0 ]; then
-    OWNER=$(stat -c '%U' node_modules)
-    if [ "$OWNER" = "root" ]; then
+# Check for root-owned files (node_modules, package-lock.json, or current dir)
+if [ "$EUID" -ne 0 ]; then
+    BAD_PERMS=0
+    
+    if [ -d "node_modules" ] && [ "$(stat -c '%U' node_modules)" = "root" ]; then
+        BAD_PERMS=1
+    fi
+    if [ -f "package-lock.json" ] && [ "$(stat -c '%U' package-lock.json)" = "root" ]; then
+        BAD_PERMS=1
+    fi
+    if [ "$(stat -c '%U' .)" = "root" ]; then
+        BAD_PERMS=1
+    fi
+
+    if [ "$BAD_PERMS" -eq 1 ]; then
         echo ""
-        echo "❌ WARNING: 'node_modules' is owned by root!"
-        echo "   This likely happened because you ran 'sudo npm install' previously."
-        echo "   This will cause permission errors."
+        echo "❌ WARNING: Root-owned files detected!"
+        echo "   'node_modules', 'package-lock.json', or the project directory are owned by root."
+        echo "   This causes 'EACCES: permission denied' errors."
         echo ""
         echo "   To fix, run:"
-        echo "   sudo chown -R $(whoami) node_modules"
+        echo "   sudo chown -R $(whoami) ."
         echo ""
         read -p "   Press Enter to attempt fix automatically (or Ctrl+C to stop)..."
-        sudo chown -R $(whoami) node_modules
+        sudo chown -R $(whoami) .
         echo "   ✓ Fixed permissions."
     fi
 fi
