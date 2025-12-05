@@ -573,6 +573,30 @@ class DashboardApp {
         if (networkSelect) {
             networkSelect.addEventListener('change', (e) => this.handleNetworkSwitch(e.target.value));
         }
+
+        // Timeline Cookie Actions (Delegation)
+        if (this.timelineTimeline) {
+            this.timelineTimeline.addEventListener('click', (e) => {
+                // Handle View Cookies
+                if (e.target.classList.contains('view-cookies-btn')) {
+                    const { domain, url, container } = e.target.dataset;
+                    this.loadCookiesForEvent(domain, url, container);
+                }
+
+                // Handle Delete All Cookies
+                if (e.target.classList.contains('delete-all-cookies-btn')) {
+                    const { domain, url, container } = e.target.dataset;
+                    this.deleteAllCookies(domain, url, container);
+                }
+
+                // Handle Delete Single Cookie
+                if (e.target.closest('.delete-cookie-btn')) {
+                    const btn = e.target.closest('.delete-cookie-btn');
+                    const { url, name, storeid } = btn.dataset;
+                    this.deleteSingleCookie(url, name, storeid, btn);
+                }
+            });
+        }
     }
 
     async handleNetworkSwitch(network) {
@@ -1290,39 +1314,18 @@ class DashboardApp {
         console.log('Dashboard: Timeline rendering complete');
     }
 
-        // Add event delegation for cookie buttons
-        this.timelineTimeline.addEventListener('click', (e) => {
-        // Handle View Cookies
-        if (e.target.classList.contains('view-cookies-btn')) {
-            const { domain, url, container } = e.target.dataset;
-            this.loadCookiesForEvent(domain, url, container);
-        }
 
-        // Handle Delete All Cookies
-        if (e.target.classList.contains('delete-all-cookies-btn')) {
-            const { domain, url, container } = e.target.dataset;
-            this.deleteAllCookies(domain, url, container);
-        }
 
-        // Handle Delete Single Cookie
-        if (e.target.closest('.delete-cookie-btn')) {
-            const btn = e.target.closest('.delete-cookie-btn');
-            const { url, name, storeid } = btn.dataset;
-            this.deleteSingleCookie(url, name, storeid, btn);
-        }
-    });
-    }
+    renderSites(sitesData) {
+        this.sitesGrid.innerHTML = '';
 
-renderSites(sitesData) {
-    this.sitesGrid.innerHTML = '';
+        // Sort by visit count desc
+        const sortedSites = [...sitesData].sort((a, b) => b.count - a.count);
 
-    // Sort by visit count desc
-    const sortedSites = [...sitesData].sort((a, b) => b.count - a.count);
-
-    sortedSites.forEach(data => {
-        const card = document.createElement('div');
-        card.className = 'site-card';
-        card.innerHTML = `
+        sortedSites.forEach(data => {
+            const card = document.createElement('div');
+            card.className = 'site-card';
+            card.innerHTML = `
                 <h3>${data.domain}</h3>
                 <div class="site-stats">
                     <div class="site-stat">
@@ -1336,69 +1339,69 @@ renderSites(sitesData) {
                 </div>
                 <div class="last-visit">Last: ${new Date(data.lastVisit).toLocaleDateString()}</div>
             `;
-        this.sitesGrid.appendChild(card);
-    });
-}
+            this.sitesGrid.appendChild(card);
+        });
+    }
 
-initCharts() {
-    // Decisions Chart
-    const ctx1 = document.getElementById('decisionsChart').getContext('2d');
-    this.decisionsChart = new Chart(ctx1, {
-        type: 'doughnut',
-        data: {
-            labels: ['Accepted', 'Declined'],
-            datasets: [{
-                data: [0, 0],
-                backgroundColor: ['#4CAF50', '#F44336']
-            }]
-        }
-    });
+    initCharts() {
+        // Decisions Chart
+        const ctx1 = document.getElementById('decisionsChart').getContext('2d');
+        this.decisionsChart = new Chart(ctx1, {
+            type: 'doughnut',
+            data: {
+                labels: ['Accepted', 'Declined'],
+                datasets: [{
+                    data: [0, 0],
+                    backgroundColor: ['#4CAF50', '#F44336']
+                }]
+            }
+        });
 
-    // Sites Chart
-    const ctx2 = document.getElementById('sitesChart').getContext('2d');
-    this.sitesChart = new Chart(ctx2, {
-        type: 'bar',
-        data: {
-            labels: [],
-            datasets: [{
-                label: 'Consents',
-                data: [],
-                backgroundColor: '#2196F3'
-            }]
-        }
-    });
-}
+        // Sites Chart
+        const ctx2 = document.getElementById('sitesChart').getContext('2d');
+        this.sitesChart = new Chart(ctx2, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Consents',
+                    data: [],
+                    backgroundColor: '#2196F3'
+                }]
+            }
+        });
+    }
 
-updateCharts(sitesData) {
-    // 1. Decisions Chart
-    let accepted = 0;
-    let declined = 0;
+    updateCharts(sitesData) {
+        // 1. Decisions Chart
+        let accepted = 0;
+        let declined = 0;
 
-    sitesData.forEach(site => {
-        accepted += site.accepted;
-        declined += site.declined;
-    });
+        sitesData.forEach(site => {
+            accepted += site.accepted;
+            declined += site.declined;
+        });
 
-    this.decisionsChart.data.datasets[0].data = [accepted, declined];
-    this.decisionsChart.update();
+        this.decisionsChart.data.datasets[0].data = [accepted, declined];
+        this.decisionsChart.update();
 
-    // 2. Sites Chart (Top 10)
-    const topSites = [...sitesData].sort((a, b) => b.count - a.count).slice(0, 10);
+        // 2. Sites Chart (Top 10)
+        const topSites = [...sitesData].sort((a, b) => b.count - a.count).slice(0, 10);
 
-    this.sitesChart.data.labels = topSites.map(s => s.domain);
-    this.sitesChart.data.datasets[0].data = topSites.map(s => s.count);
-    this.sitesChart.update();
-}
+        this.sitesChart.data.labels = topSites.map(s => s.domain);
+        this.sitesChart.data.datasets[0].data = topSites.map(s => s.count);
+        this.sitesChart.update();
+    }
 
-clearData() {
-    this.stats.total.textContent = '--';
-    this.stats.sites.textContent = '--';
-    this.stats.txs.textContent = '--';
-    this.stats.score.textContent = '--';
-    this.timelineTimeline.innerHTML = '';
-    this.sitesGrid.innerHTML = '';
-    this.noDataMsg.style.display = 'flex';
-}
+    clearData() {
+        this.stats.total.textContent = '--';
+        this.stats.sites.textContent = '--';
+        this.stats.txs.textContent = '--';
+        this.stats.score.textContent = '--';
+        this.timelineTimeline.innerHTML = '';
+        this.sitesGrid.innerHTML = '';
+        this.noDataMsg.style.display = 'flex';
+    }
 }
 
 // Initialize
