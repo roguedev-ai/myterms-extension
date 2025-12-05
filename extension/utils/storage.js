@@ -254,7 +254,7 @@ class ConsentStorage {
           const cursor = event.target.result;
           if (cursor) {
             const item = cursor.value;
-            // console.log(`Checking item: ${item.id}, batched: ${item.batched}, ts: ${item.timestamp}, threshold: ${thresholdTime}`);
+            console.log(`[BatchDebug] Item ${item.id}: batched=${item.batched}, ts=${item.timestamp}, threshold=${thresholdTime}, include=${!item.batched && item.timestamp <= thresholdTime}`);
             if (!item.batched && item.timestamp <= thresholdTime) {
               results.push(item);
             }

@@ -886,9 +886,12 @@ class DashboardApp {
             this.refreshBtn.classList.add('spinning');
 
             // Get data from service (limit 50 for initial load)
-            const data = await this.dataService.getConsentData(50, 0);
+            const [data, stats] = await Promise.all([
+                this.dataService.getConsentData(50, 0),
+                this.dataService.request('GET_STATS')
+            ]);
 
-            this.processData(data.consents, data.batches);
+            this.processData(data.consents, data.batches, stats);
 
             this.refreshBtn.classList.remove('spinning');
         } catch (error) {
@@ -944,11 +947,21 @@ class DashboardApp {
 
     // ... (loadData and processData methods remain same)
 
-    processData(consents, batches) {
+    processData(consents, batches, globalStats) {
         console.log('Dashboard: processData called with', consents ? consents.length : 0, 'consents');
         if (!consents || consents.length === 0) {
             this.noDataMsg.style.display = 'flex';
             this.timelineTimeline.innerHTML = '';
+            // If no consents, but we have global stats, still update stats
+            if (globalStats && !globalStats.error) {
+                this.updateStatsFromGlobal(globalStats);
+            } else {
+                // Clear stats if no data and no global stats
+                this.stats.consents.textContent = 0;
+                this.stats.sites.textContent = 0;
+                this.stats.score.textContent = 100; // 100% privacy if no consents
+                this.stats.txs.textContent = 0;
+            }
             return;
         }
 
@@ -956,19 +969,13 @@ class DashboardApp {
         if (this.noDataMsg) {
             this.noDataMsg.style.display = 'none';
             this.noDataMsg.style.visibility = 'hidden';
-            this.noDataMsg.classList.add('hidden');
         }
-
-        // Update Stats
-        this.stats.total.textContent = consents.length;
-        const uniqueSites = new Set(consents.map(c => c.siteDomain)).size;
-        this.stats.sites.textContent = uniqueSites;
-        this.stats.txs.textContent = batches ? batches.totalBatches : 0;
-
-        // Calculate privacy score (mock logic)
-        const declined = consents.filter(c => c.decisionType === 'decline').length;
-        const score = Math.round((declined / consents.length) * 100) || 0;
-        this.stats.score.textContent = `${score}%`;
+        // Update Stats with GLOBAL stats if available, otherwise fallback to local calculation
+        if (globalStats && !globalStats.error) {
+            this.updateStatsFromGlobal(globalStats);
+        } else {
+            this.updateStatsFromLocal(consents || []);
+        }
 
         // Render Timeline
         this.renderTimeline(consents);
@@ -979,6 +986,36 @@ class DashboardApp {
 
         // Update Charts
         this.updateCharts(consents);
+    }
+
+    updateStatsFromGlobal(stats) {
+        // Update Total Consents
+        this.stats.total.textContent = stats.totalConsents || 0;
+
+        // Update Sites Tracked
+        this.stats.sites.textContent = stats.totalSites || 0;
+
+        // Update Privacy Score (mock calculation based on accept/reject ratio)
+        const total = stats.totalConsents || 0;
+        const rejected = stats.totalDeclined || 0;
+        const score = total === 0 ? 100 : Math.round((rejected / total) * 100);
+        this.stats.score.textContent = `${score}%`;
+
+        // Update Blockchain Txs
+        this.stats.txs.textContent = stats.totalBatches || 0;
+    }
+
+    updateStatsFromLocal(consents) {
+        // Fallback if GET_STATS fails
+        if (!consents) return;
+
+        this.stats.total.textContent = consents.length;
+        const uniqueSites = new Set(consents.map(c => c.siteDomain)).size;
+        this.stats.sites.textContent = uniqueSites;
+
+        const declined = consents.filter(c => c.decisionType === 'decline').length;
+        const score = consents.length === 0 ? 100 : Math.round((declined / consents.length) * 100);
+        this.stats.score.textContent = `${score}%`;
     }
 
     async loadCookiesForEvent(domain, url, containerId) {
