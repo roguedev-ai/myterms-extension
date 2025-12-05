@@ -66,12 +66,14 @@ class DataService {
 
     // Specific API methods
     async getConsentData(limit = 50, offset = 0) {
+        console.log(`DataService: getConsentData called (limit: ${limit}, offset: ${offset})`);
         // For direct mode, we can use storage directly for speed, or go through message passing
         // To keep it unified, we'll use message passing for both if possible, 
         // but the original code used direct storage access for 'loadData'.
         // Let's try to use the 'GET_CONSENT_DATA' message we saw in background.js
         try {
             const response = await this.request('GET_CONSENT_DATA', { limit, offset });
+            console.log('DataService: Received response:', response);
             if (response.error) throw new Error(response.error);
             return response;
         } catch (e) {
@@ -83,6 +85,60 @@ class DataService {
             }
             throw e;
         }
+    }
+
+    async request(type, payload = {}) {
+        if (this.isExtensionContext) {
+            // Use direct chrome.runtime.sendMessage
+            return new Promise((resolve, reject) => {
+                chrome.runtime.sendMessage({ type, ...payload }, (response) => {
+                    if (chrome.runtime.lastError) {
+                        reject(new Error(chrome.runtime.lastError.message));
+                    } else {
+                        resolve(response);
+                    }
+                });
+            });
+        }
+
+        // Use window.postMessage bridge
+        return new Promise((resolve, reject) => {
+            const requestId = Math.random().toString(36).substring(7);
+            console.log(`DataService: Sending request ${requestId} (${type})`);
+
+            const listener = (event) => {
+                if (event.source !== window ||
+                    event.data.type !== 'MYTERMS_WEB_RES' ||
+                    event.data.requestId !== requestId) {
+                    return;
+                }
+
+                console.log(`DataService: Received bridge response for ${requestId}`);
+                window.removeEventListener('message', listener);
+
+                if (event.data.success) {
+                    resolve(event.data.data);
+                } else {
+                    reject(new Error(event.data.error));
+                }
+            };
+
+            window.addEventListener('message', listener);
+
+            // Send request
+            window.postMessage({
+                type: 'MYTERMS_WEB_REQ',
+                requestId,
+                payload: { type, ...payload }
+            }, '*');
+
+            // Timeout
+            setTimeout(() => {
+                window.removeEventListener('message', listener);
+                console.error(`DataService: Request ${requestId} timed out`);
+                reject(new Error('Request timed out'));
+            }, 5000);
+        });
     }
 
     async clearData() {
