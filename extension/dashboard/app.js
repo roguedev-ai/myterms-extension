@@ -458,6 +458,19 @@ class DashboardApp {
         }
     }
 
+    showLoading(show) {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            if (show) {
+                overlay.classList.remove('hidden');
+                overlay.classList.add('active');
+            } else {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('active');
+            }
+        }
+    }
+
     showError(message) {
         const modal = document.getElementById('errorModal');
         const errorMsg = document.getElementById('errorMessage');
