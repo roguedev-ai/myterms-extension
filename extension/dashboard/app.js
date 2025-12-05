@@ -209,6 +209,7 @@ class DataService {
 
 class DashboardApp {
     constructor() {
+        console.log('DashboardApp v1.1 initialized');
         this.dataService = new DataService();
         this.consents = []; // Initialize empty array
         this.init();
