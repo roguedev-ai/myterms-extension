@@ -134,165 +134,160 @@ class ConsentManager {
     }
   }
 
-});
-    } catch (error) {
-  console.error('Failed to get stats:', error);
-  throw error;
-}
-  }
+
 
   async getAllSitesData() {
-  try {
-    return await consentStorage.getAllSitesData();
-  } catch (error) {
-    console.error('Failed to get all sites data:', error);
-    throw error;
+    try {
+      return await consentStorage.getAllSitesData();
+    } catch (error) {
+      console.error('Failed to get all sites data:', error);
+      throw error;
+    }
   }
-}
 
   async prepareConsentBatch(force = false) {
-  this.processing = true;
+    this.processing = true;
 
-  try {
-    // Get consents that are ready for batching
-    const threshold = force ? 0 : 24;
-    const readyConsents = await consentStorage.getBatchReadyConsents(threshold);
+    try {
+      // Get consents that are ready for batching
+      const threshold = force ? 0 : 24;
+      const readyConsents = await consentStorage.getBatchReadyConsents(threshold);
 
-    if (readyConsents.length === 0) {
-      console.log('No consents ready for batch processing');
-      throw new Error('No pending consents to batch');
+      if (readyConsents.length === 0) {
+        console.log('No consents ready for batch processing');
+        throw new Error('No pending consents to batch');
+      }
+
+      console.log(`Preparing batch of ${readyConsents.length} consents...`);
+
+      // Group consents by site
+      const groupedConsents = this.groupConsentsBySite(readyConsents);
+
+      // Prepare data for blockchain submission
+      const sites = Object.keys(groupedConsents);
+      const hashes = [];
+
+      for (const site of sites) {
+        const siteConsents = groupedConsents[site];
+        // Create batch hash from all consents for this site
+        const batchData = siteConsents.map(c => c.termsHash).join('');
+        const batchHash = await myTermsEthers.generateTermsHash(batchData);
+        hashes.push(batchHash);
+      }
+
+      return {
+        sites,
+        hashes,
+        consentIds: readyConsents.map(c => c.id),
+        siteData: groupedConsents,
+        count: readyConsents.length
+      };
+
+    } catch (error) {
+      console.error('Failed to prepare consent batch:', error);
+      this.processing = false;
+      throw error;
     }
-
-    console.log(`Preparing batch of ${readyConsents.length} consents...`);
-
-    // Group consents by site
-    const groupedConsents = this.groupConsentsBySite(readyConsents);
-
-    // Prepare data for blockchain submission
-    const sites = Object.keys(groupedConsents);
-    const hashes = [];
-
-    for (const site of sites) {
-      const siteConsents = groupedConsents[site];
-      // Create batch hash from all consents for this site
-      const batchData = siteConsents.map(c => c.termsHash).join('');
-      const batchHash = await myTermsEthers.generateTermsHash(batchData);
-      hashes.push(batchHash);
-    }
-
-    return {
-      sites,
-      hashes,
-      consentIds: readyConsents.map(c => c.id),
-      siteData: groupedConsents,
-      count: readyConsents.length
-    };
-
-  } catch (error) {
-    console.error('Failed to prepare consent batch:', error);
-    this.processing = false;
-    throw error;
   }
-}
 
   async finalizeBatch(txResult, batchData) {
-  try {
-    console.log('Finalizing batch with tx:', txResult.hash);
+    try {
+      console.log('Finalizing batch with tx:', txResult.hash);
 
-    // Mark consents as batched
-    await consentStorage.markAsBatched(batchData.consentIds, {
-      batchId: txResult.hash,
-      txHash: txResult.hash,
-      blockNumber: txResult.blockNumber
-    });
+      // Mark consents as batched
+      await consentStorage.markAsBatched(batchData.consentIds, {
+        batchId: txResult.hash,
+        txHash: txResult.hash,
+        blockNumber: txResult.blockNumber
+      });
 
-    // Record batch information
-    await consentStorage.recordBatch({
-      txHash: txResult.hash,
-      consentIds: batchData.consentIds,
-      siteData: batchData.siteData,
-      gasUsed: txResult.gasUsed,
-      blockNumber: txResult.blockNumber
-    });
+      // Record batch information
+      await consentStorage.recordBatch({
+        txHash: txResult.hash,
+        consentIds: batchData.consentIds,
+        siteData: batchData.siteData,
+        gasUsed: txResult.gasUsed,
+        blockNumber: txResult.blockNumber
+      });
 
-    // Update last batch time
-    this.lastBatchTime = Date.now();
+      // Update last batch time
+      this.lastBatchTime = Date.now();
 
-    // Notify user of successful batch
-    this.notifyUserOfBatch(txResult, batchData.count);
+      // Notify user of successful batch
+      this.notifyUserOfBatch(txResult, batchData.count);
 
-    console.log('Batch finalized successfully');
+      console.log('Batch finalized successfully');
 
-  } catch (error) {
-    console.error('Failed to finalize batch:', error);
-    this.notifyUserOfBatchFailure(`Batch finalization failed: ${error.message}`);
-    throw error;
-  } finally {
-    this.processing = false;
-  }
-}
-
-groupConsentsBySite(consents) {
-  const grouped = {};
-
-  consents.forEach(consent => {
-    if (!grouped[consent.siteDomain]) {
-      grouped[consent.siteDomain] = [];
+    } catch (error) {
+      console.error('Failed to finalize batch:', error);
+      this.notifyUserOfBatchFailure(`Batch finalization failed: ${error.message}`);
+      throw error;
+    } finally {
+      this.processing = false;
     }
-    grouped[consent.siteDomain].push(consent);
-  });
+  }
 
-  return grouped;
-}
+  groupConsentsBySite(consents) {
+    const grouped = {};
+
+    consents.forEach(consent => {
+      if (!grouped[consent.siteDomain]) {
+        grouped[consent.siteDomain] = [];
+      }
+      grouped[consent.siteDomain].push(consent);
+    });
+
+    return grouped;
+  }
 
   async performMaintenance() {
-  try {
-    console.log('Performing maintenance tasks...');
+    try {
+      console.log('Performing maintenance tasks...');
 
-    // Clear old processed consents
-    const clearedCount = await consentStorage.clearProcessedConsents(30);
+      // Clear old processed consents
+      const clearedCount = await consentStorage.clearProcessedConsents(30);
 
-    if (clearedCount > 0) {
-      console.log(`Cleared ${clearedCount} old processed consents`);
+      if (clearedCount > 0) {
+        console.log(`Cleared ${clearedCount} old processed consents`);
+      }
+
+    } catch (error) {
+      console.error('Maintenance task failed:', error);
+    }
+  }
+
+  notifyUserOfBatch(txResult, consentCount) {
+    if (!chrome || !chrome.notifications) {
+      console.log('Notifications not available');
+      return;
     }
 
-  } catch (error) {
-    console.error('Maintenance task failed:', error);
-  }
-}
-
-notifyUserOfBatch(txResult, consentCount) {
-  if (!chrome || !chrome.notifications) {
-    console.log('Notifications not available');
-    return;
-  }
-
-  chrome.notifications.create({
-    type: 'basic',
-    iconUrl: 'icons/icon128.png',
-    title: 'MyTerms Batch Submitted',
-    message: `Successfully logged ${consentCount} consents to blockchain. Transaction: ${txResult.hash.substring(0, 10)}...`,
-    buttons: [{
-      title: 'View Transaction'
-    }],
-    requireInteraction: false
-  });
-}
-
-notifyUserOfBatchFailure(reason) {
-  if (!chrome || !chrome.notifications) {
-    console.log('Notifications not available');
-    return;
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon128.png',
+      title: 'MyTerms Batch Submitted',
+      message: `Successfully logged ${consentCount} consents to blockchain. Transaction: ${txResult.hash.substring(0, 10)}...`,
+      buttons: [{
+        title: 'View Transaction'
+      }],
+      requireInteraction: false
+    });
   }
 
-  chrome.notifications.create({
-    type: 'basic',
-    iconUrl: 'icons/icon128.png',
-    title: 'MyTerms Batch Failed',
-    message: `Batch submission failed: ${reason}`,
-    requireInteraction: true
-  });
-}
+  notifyUserOfBatchFailure(reason) {
+    if (!chrome || !chrome.notifications) {
+      console.log('Notifications not available');
+      return;
+    }
+
+    chrome.notifications.create({
+      type: 'basic',
+      iconUrl: 'icons/icon128.png',
+      title: 'MyTerms Batch Failed',
+      message: `Batch submission failed: ${reason}`,
+      requireInteraction: true
+    });
+  }
 }
 
 // Handle ALL messages from content script, popup, and dashboard
