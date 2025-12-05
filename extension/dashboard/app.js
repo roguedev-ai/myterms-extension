@@ -1219,6 +1219,7 @@ class DashboardApp {
         }
 
         sorted.forEach(consent => {
+            const status = consent.decisionType === 'accept' ? 'Accepted' : 'Declined';
             const item = document.createElement('div');
             item.className = 'timeline-item';
             item.innerHTML = `

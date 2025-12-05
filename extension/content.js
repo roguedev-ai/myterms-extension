@@ -13,6 +13,14 @@ class EnhancedBannerDetector {
   }
 
   async init() {
+    // Prevent running on the dashboard itself to avoid self-consent loops
+    if (window.location.href.includes('dashboard/index.html') ||
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1') {
+      console.log('Enhanced Banner Detector: Skipping dashboard/localhost');
+      return;
+    }
+
     console.log('Enhanced Banner Detector initializing...');
 
     // Load user's MyTerms profile
