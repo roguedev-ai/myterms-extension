@@ -998,7 +998,10 @@ class DashboardApp {
             let html = `<div class="cookie-list">
                 <div class="cookie-header">
                     <span>Found ${cookies.length} cookies</span>
-                    <button class="danger-btn small" onclick="window.dashboardApp.deleteAllCookies('${domain}', '${url}', '${containerId}')">Delete All</button>
+                    <button class="danger-btn small delete-all-cookies-btn" 
+                        data-domain="${domain}" 
+                        data-url="${url}" 
+                        data-container="${containerId}">Delete All</button>
                 </div>`;
 
             cookies.forEach(cookie => {
@@ -1008,8 +1011,10 @@ class DashboardApp {
                             <span class="cookie-name">${cookie.name}</span>
                             <span class="cookie-domain">${cookie.domain}</span>
                         </div>
-                        <button class="icon-btn delete-cookie" title="Delete" 
-                            onclick="window.dashboardApp.deleteSingleCookie('${url}', '${cookie.name}', '${cookie.storeId}', this)">
+                        <button class="icon-btn delete-cookie-btn" title="Delete" 
+                            data-url="${url}" 
+                            data-name="${cookie.name}" 
+                            data-storeid="${cookie.storeId}">
                             <i class="fas fa-trash"></i>
                         </button>
                     </div>
@@ -1163,7 +1168,10 @@ class DashboardApp {
                             <span class="value status ${status.toLowerCase()}">${status}</span>
                         </div>
                         <div class="cookie-section" id="cookies-${consent.timestamp}">
-                            <button class="secondary-btn small" onclick="window.dashboardApp.loadCookiesForEvent('${consent.siteDomain}', '${consent.url}', 'cookies-${consent.timestamp}')">
+                            <button class="secondary-btn small view-cookies-btn" 
+                                data-domain="${consent.siteDomain}" 
+                                data-url="${consent.url}" 
+                                data-container="cookies-${consent.timestamp}">
                                 🍪 View Cookies
                             </button>
                         </div>
@@ -1171,6 +1179,28 @@ class DashboardApp {
                 </div>
             `;
             this.timelineTimeline.appendChild(item);
+        });
+
+        // Add event delegation for cookie buttons
+        this.timelineTimeline.addEventListener('click', (e) => {
+            // Handle View Cookies
+            if (e.target.classList.contains('view-cookies-btn')) {
+                const { domain, url, container } = e.target.dataset;
+                this.loadCookiesForEvent(domain, url, container);
+            }
+
+            // Handle Delete All Cookies
+            if (e.target.classList.contains('delete-all-cookies-btn')) {
+                const { domain, url, container } = e.target.dataset;
+                this.deleteAllCookies(domain, url, container);
+            }
+
+            // Handle Delete Single Cookie
+            if (e.target.closest('.delete-cookie-btn')) {
+                const btn = e.target.closest('.delete-cookie-btn');
+                const { url, name, storeid } = btn.dataset;
+                this.deleteSingleCookie(url, name, storeid, btn);
+            }
         });
     }
 
