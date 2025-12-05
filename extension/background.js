@@ -320,75 +320,64 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch(error => sendResponse({ error: error.message }));
     return true;
   }
-    .catch (error => sendResponse({ success: false, error: error.message }));
-return true;
-}
 
-// GET_STATS - from dashboard
-if (request.type === 'GET_STATS') {
-  consentManager.getStats()
-    .then(stats => sendResponse(stats))
-    .catch(error => sendResponse({ error: error.message }));
-  return true;
-}
+  // GET_COOKIES - from dashboard
+  if (request.type === 'GET_COOKIES') {
+    const domain = request.domain;
+    if (!domain) {
+      sendResponse({ error: 'Domain required' });
+      return true;
+    }
 
-// GET_COOKIES - from dashboard
-if (request.type === 'GET_COOKIES') {
-  const domain = request.domain;
-  if (!domain) {
-    sendResponse({ error: 'Domain required' });
+    chrome.cookies.getAll({ domain }, (cookies) => {
+      sendResponse({ cookies });
+    });
     return true;
   }
 
-  chrome.cookies.getAll({ domain }, (cookies) => {
-    sendResponse({ cookies });
-  });
-  return true;
-}
-
-// DELETE_COOKIE - from dashboard
-if (request.type === 'DELETE_COOKIE') {
-  const { url, name, storeId } = request;
-  chrome.cookies.remove({ url, name, storeId }, (details) => {
-    if (details) {
-      sendResponse({ success: true, details });
-    } else {
-      sendResponse({ success: false, error: chrome.runtime.lastError?.message || 'Failed to remove cookie' });
-    }
-  });
-  return true;
-}
-
-// FORCE_BATCH - from popup/dashboard
-if (request.type === 'FORCE_BATCH') {
-  consentManager.checkAndProcessBatch()
-    .then(() => sendResponse({ success: true }))
-    .catch(error => sendResponse({ success: false, error: error.message }));
-  return true;
-}
-
-// GET_PREFERENCES - from dashboard
-if (request.type === 'GET_PREFERENCES') {
-  chrome.storage.sync.get(['myTermsProfile'], (result) => {
-    sendResponse({ preferences: result.myTermsProfile?.preferences || {} });
-  });
-  return true;
-}
-
-// SAVE_PREFERENCES - from dashboard
-if (request.type === 'SAVE_PREFERENCES') {
-  chrome.storage.sync.get(['myTermsProfile'], (result) => {
-    const profile = result.myTermsProfile || {};
-    profile.preferences = request.preferences;
-    chrome.storage.sync.set({ myTermsProfile: profile }, () => {
-      sendResponse({ success: true });
+  // DELETE_COOKIE - from dashboard
+  if (request.type === 'DELETE_COOKIE') {
+    const { url, name, storeId } = request;
+    chrome.cookies.remove({ url, name, storeId }, (details) => {
+      if (details) {
+        sendResponse({ success: true, details });
+      } else {
+        sendResponse({ success: false, error: chrome.runtime.lastError?.message || 'Failed to remove cookie' });
+      }
     });
-  });
-  return true;
-}
+    return true;
+  }
 
-// Unknown message type - don't keep channel open
-return false;
+  // FORCE_BATCH - from popup/dashboard
+  if (request.type === 'FORCE_BATCH') {
+    consentManager.checkAndProcessBatch()
+      .then(() => sendResponse({ success: true }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
+  }
+
+  // GET_PREFERENCES - from dashboard
+  if (request.type === 'GET_PREFERENCES') {
+    chrome.storage.sync.get(['myTermsProfile'], (result) => {
+      sendResponse({ preferences: result.myTermsProfile?.preferences || {} });
+    });
+    return true;
+  }
+
+  // SAVE_PREFERENCES - from dashboard
+  if (request.type === 'SAVE_PREFERENCES') {
+    chrome.storage.sync.get(['myTermsProfile'], (result) => {
+      const profile = result.myTermsProfile || {};
+      profile.preferences = request.preferences;
+      chrome.storage.sync.set({ myTermsProfile: profile }, () => {
+        sendResponse({ success: true });
+      });
+    });
+    return true;
+  }
+
+  // Unknown message type - don't keep channel open
+  return false;
 });
 
 // Handle notification clicks
