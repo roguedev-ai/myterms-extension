@@ -756,6 +756,7 @@ class DashboardApp {
     // ... (loadData and processData methods remain same)
 
     processData(consents, batches) {
+        console.log('Dashboard: processData called with', consents ? consents.length : 0, 'consents');
         if (!consents || consents.length === 0) {
             this.noDataMsg.style.display = 'flex';
             this.timelineTimeline.innerHTML = '';
