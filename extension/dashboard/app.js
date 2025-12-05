@@ -264,7 +264,649 @@ class DashboardApp {
         }
     }
 
-    // ... (rest of methods) ...
+    disableWalletFeatures() {
+        // Replace wallet status area with info message
+        const walletStatus = document.getElementById('walletStatus');
+        if (walletStatus) {
+            walletStatus.innerHTML = `
+                <div style="background: rgba(251, 191, 36, 0.2); padding: 10px; border-radius: 8px; text-align: center;">
+                    <p style="margin: 0; font-size: 13px; color: #fbbf24;">
+                        ℹ️ To connect wallet and submit batches, use the extension popup (click the extension icon)
+                    </p>
+                </div>
+            `;
+        }
+    }
+
+    async checkUrlActions() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const action = urlParams.get('action');
+
+        if (action === 'forceBatch') {
+            // Remove param to prevent re-triggering on reload
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            // Wait a bit for UI to load
+            setTimeout(() => this.handleForceBatchAction(), 500);
+        }
+    }
+
+    async handleForceBatchAction() {
+        try {
+            console.log('Handling force batch action...');
+
+            // Show loading overlay with custom message
+            const overlay = document.getElementById('loadingOverlay');
+            const spinner = overlay.querySelector('.spinner');
+            const originalText = overlay.textContent; // This might be just whitespace if spinner is separate
+
+            // Create a status message element if it doesn't exist
+            let statusMsg = document.getElementById('batchStatusMsg');
+            if (!statusMsg) {
+                statusMsg = document.createElement('div');
+                statusMsg.id = 'batchStatusMsg';
+                statusMsg.style.marginTop = '20px';
+                statusMsg.style.color = 'white';
+                statusMsg.style.fontWeight = 'bold';
+                overlay.appendChild(statusMsg);
+            }
+
+            overlay.classList.remove('hidden');
+            statusMsg.textContent = 'Connecting wallet...';
+
+            // 1. Connect Wallet
+            await walletManager.connectWallet('metamask');
+
+            // Check network
+            const wallet = walletManager.getConnectedWallet();
+            // Handle BigInt chainId from ethers v6
+            const chainId = wallet?.network?.chainId ? Number(wallet.network.chainId) : 0;
+            console.log('Detected Chain ID:', chainId, 'Wallet Network:', wallet?.network);
+
+            if (chainId === 1) {
+                throw new Error(`Please switch your wallet to Localhost (Chain ID: 31337) or Sepolia (Chain ID: 11155111). Detected Chain ID: ${chainId} (Mainnet).`);
+            }
+
+            statusMsg.textContent = 'Preparing batch data...';
+
+            // 2. Prepare Batch (FORCE it)
+            const batchData = await this.dataService.prepareBatch(true);
+
+
+            statusMsg.textContent = `Signing transaction for ${batchData.count} consents...`;
+
+            // 3. Sign Transaction
+            // Always reset ethers to ensure we pick up the correct network config (especially after a switch)
+            await myTermsEthers.reset();
+
+            const txResult = await myTermsEthers.submitConsentBatch(
+                batchData.sites,
+                batchData.hashes
+            );
+
+            statusMsg.textContent = 'Finalizing batch...';
+
+            // Sanitize txResult for postMessage (remove functions/promises)
+            const safeTxResult = {
+                hash: txResult.hash,
+                blockNumber: txResult.blockNumber,
+                gasUsed: txResult.gasUsed.toString(),
+                confirmations: 1 // Hardcode or extract value if available
+            };
+
+            // 4. Finalize
+            await this.dataService.finalizeBatch(safeTxResult, batchData);
+
+            statusMsg.textContent = 'Success! Batch submitted.';
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                this.loadData(); // Refresh view
+                alert('Batch submitted successfully! Transaction: ' + txResult.hash);
+            }, 1500);
+
+
+
+        } catch (error) {
+            console.error('Force batch failed:', error);
+
+            // Check if it's a network error
+            if (error.message.includes('Please switch your wallet')) {
+                console.log('Showing network switch modal...');
+                const errorContainer = document.getElementById('errorMessage');
+                if (errorContainer) {
+                    errorContainer.innerHTML = `
+                        <p>${error.message}</p>
+                        <button id="autoSwitchBtn" class="connect-btn" style="margin-top: 15px; background: #4CAF50; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; font-weight: bold; width: 100%;">
+                            🔄 Switch to Localhost
+                        </button>
+                    `;
+
+                    // Show modal
+                    const modal = document.getElementById('errorModal');
+                    if (modal) {
+                        modal.classList.remove('hidden');
+
+                        // Add click handler
+                        setTimeout(() => {
+                            const btn = document.getElementById('autoSwitchBtn');
+                            if (btn) {
+                                btn.addEventListener('click', async () => {
+                                    modal.classList.add('hidden');
+                                    await this.handleNetworkSwitch('localhost');
+                                });
+                            }
+                        }, 100);
+                    }
+                }
+            } else {
+                this.showError(`Force batch failed: ${error.message}`);
+
+                // Add Skip button for transaction errors
+                const errorContainer = document.getElementById('errorMessage');
+                if (errorContainer && (error.message.includes('rejected') || error.message.includes('funds'))) {
+                    const skipBtn = document.createElement('button');
+                    skipBtn.className = 'connect-btn';
+                    skipBtn.style.marginTop = '10px';
+                    skipBtn.style.background = '#f44336'; // Red
+                    skipBtn.textContent = '⏩ Skip Blockchain (Test Only)';
+                    skipBtn.onclick = async () => {
+                        document.getElementById('errorModal').classList.add('hidden');
+                        await this.skipBlockchainSubmission();
+                    };
+                    errorContainer.appendChild(skipBtn);
+                }
+            }
+        } finally {
+            // Hide loading overlay
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('active');
+            }
+        }
+    }
+
+    async skipBlockchainSubmission() {
+        try {
+            const overlay = document.getElementById('loadingOverlay');
+            overlay.classList.remove('hidden');
+            const statusMsg = document.getElementById('batchStatusMsg');
+            statusMsg.textContent = 'Skipping blockchain... Finalizing batch locally.';
+
+            // Mock transaction result
+            const txResult = {
+                hash: '0xSKIPPED_' + Date.now(),
+                blockNumber: 0,
+                gasUsed: '0',
+                confirmations: 0
+            };
+
+            // Re-fetch batch data since we lost it in the scope
+            const batchData = await this.dataService.prepareBatch(true);
+
+            await this.dataService.finalizeBatch(txResult, batchData);
+
+            statusMsg.textContent = 'Batch finalized (Skipped)!';
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                this.loadData();
+                alert('Batch finalized locally (Blockchain skipped).');
+            }, 1000);
+        } catch (err) {
+            console.error('Skip failed:', err);
+            alert('Skip failed: ' + err.message);
+            overlay.classList.add('hidden');
+        }
+    }
+
+    showLoading(show) {
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            if (show) {
+                overlay.classList.remove('hidden');
+                overlay.classList.add('active');
+            } else {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('active');
+            }
+        }
+    }
+
+    showError(message) {
+        const modal = document.getElementById('errorModal');
+        const errorMsg = document.getElementById('errorMessage');
+        if (modal && errorMsg) {
+            errorMsg.textContent = message;
+            modal.classList.remove('hidden');
+        } else {
+            alert(message);
+        }
+    }
+
+    initElements() {
+        // Buttons
+        this.connectBtn = document.getElementById('connectButton');
+        this.forceBatchBtn = document.getElementById('forceBatchButton');
+        this.refreshBtn = document.getElementById('refreshButton');
+        this.retryBtn = document.getElementById('retryButton');
+        this.loadMoreBtn = document.getElementById('loadMoreButton');
+        this.savePreferencesBtn = document.getElementById('savePreferencesBtn');
+
+        // Views
+        this.views = {
+            timeline: document.getElementById('timelineView'),
+            sites: document.getElementById('sitesView'),
+            analytics: document.getElementById('analyticsView'),
+            preferences: document.getElementById('preferencesView')
+        };
+
+        this.viewBtns = document.querySelectorAll('.view-btn');
+
+        // Stats
+        this.stats = {
+            total: document.getElementById('totalConsents'),
+            sites: document.getElementById('sitesCount'),
+            txs: document.getElementById('transactionsCount'),
+            score: document.getElementById('privacyScore')
+        };
+
+        // Containers
+        this.timelineContainer = document.getElementById('timelineContainer');
+        this.timelineTimeline = document.getElementById('timelineTimeline');
+        this.sitesGrid = document.getElementById('sitesGrid');
+        this.noDataMsg = document.getElementById('noDataMessage');
+        this.walletStatus = document.getElementById('walletStatus');
+        this.saveStatus = document.getElementById('saveStatus');
+
+        // Preferences
+        this.prefs = {
+            denyAll: document.getElementById('prefDenyAll'),
+            analytics: document.getElementById('prefAnalytics'),
+            marketing: document.getElementById('prefMarketing'),
+            functional: document.getElementById('prefFunctional'),
+            social: document.getElementById('prefSocial'),
+            blockchainEnabled: document.getElementById('prefBlockchainEnabled')
+        };
+    }
+
+    attachEventListeners() {
+        // Wallet Connection
+        this.connectBtn.addEventListener('click', () => this.connectWallet());
+        this.forceBatchBtn.addEventListener('click', () => this.handleForceBatchAction());
+
+        // Navigation
+        this.viewBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => this.switchView(e.target.dataset.view));
+        });
+
+        // Refresh
+        this.refreshBtn.addEventListener('click', () => this.loadData());
+        this.retryBtn.addEventListener('click', () => this.loadData());
+        this.loadMoreBtn.addEventListener('click', () => this.loadMore());
+
+        // Preferences
+        this.savePreferencesBtn.addEventListener('click', () => this.savePreferences());
+
+        // Clear Data
+        const clearBtn = document.getElementById('clearDataBtn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => this.handleClearData());
+        }
+
+        this.simulateBtn = document.getElementById('simulateConsentBtn');
+        if (this.simulateBtn) {
+            this.simulateBtn.addEventListener('click', () => this.handleSimulateConsent());
+        }
+
+        // Network Switching
+        const networkSelect = document.getElementById('networkSelect');
+        if (networkSelect) {
+            networkSelect.addEventListener('change', (e) => this.handleNetworkSwitch(e.target.value));
+        }
+    }
+
+    async handleNetworkSwitch(network) {
+        try {
+            if (!window.ethereum) return;
+
+            const networks = {
+                'localhost': {
+                    chainId: '0x7A69', // 31337
+                    chainName: 'Localhost 8545',
+                    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                    rpcUrls: ['http://127.0.0.1:8545']
+                },
+                'sepolia': {
+                    chainId: '0xAA36A7', // 11155111
+                    chainName: 'Sepolia',
+                    nativeCurrency: { name: 'Sepolia ETH', symbol: 'SEP', decimals: 18 },
+                    rpcUrls: ['https://sepolia.infura.io/v3/']
+                },
+                'mainnet': {
+                    chainId: '0x1'
+                }
+            };
+
+            const target = networks[network];
+            if (!target) return;
+
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: target.chainId }],
+                });
+            } catch (switchError) {
+                // This error code indicates that the chain has not been added to MetaMask.
+                if (switchError.code === 4902) {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [target],
+                    });
+                } else {
+                    this.showError(`Failed to switch network: ${switchError.message}`);
+                }
+            }
+        } finally {
+            // Hide loading overlay
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('active');
+            }
+        }
+    }
+
+    setupWalletListeners() {
+        walletManager.onWalletChange((wallet) => {
+            console.log('Wallet changed:', wallet);
+            this.updateWalletUI(wallet);
+            if (wallet) this.loadData(); // Reload with blockchain data
+            else this.clearBlockchainData(); // Keep local data
+        });
+    }
+
+    async checkWalletConnection() {
+        // Wait for wallet manager to init
+        setTimeout(async () => {
+            const wallet = walletManager.getConnectedWallet();
+            if (wallet) {
+                this.updateWalletUI(wallet);
+                // Reload data to include blockchain info
+                this.loadData();
+            }
+        }, 1000);
+    }
+
+    async loadPreferences() {
+        try {
+            const prefs = await this.dataService.getPreferences();
+            if (prefs) {
+                this.prefs.denyAll.checked = prefs.denyAll;
+                this.prefs.analytics.checked = prefs.analytics;
+                this.prefs.marketing.checked = prefs.marketing;
+                this.prefs.functional.checked = prefs.functional;
+                this.prefs.social.checked = prefs.social;
+                this.prefs.blockchainEnabled.checked = prefs.blockchainEnabled || false;
+            }
+        } catch (error) {
+            console.error('Failed to load preferences:', error);
+        }
+    }
+
+    async savePreferences() {
+        try {
+            this.saveStatus.textContent = 'Saving...';
+            this.saveStatus.className = 'save-status saving';
+
+            const newPrefs = {
+                denyAll: this.prefs.denyAll.checked,
+                analytics: this.prefs.analytics.checked,
+                marketing: this.prefs.marketing.checked,
+                functional: this.prefs.functional.checked,
+                social: this.prefs.social.checked,
+                blockchainEnabled: this.prefs.blockchainEnabled.checked,
+                necessary: true // Always true
+            };
+
+            await this.dataService.savePreferences(newPrefs);
+
+            this.saveStatus.textContent = 'Saved!';
+            this.saveStatus.className = 'save-status saved';
+            setTimeout(() => {
+                this.saveStatus.textContent = '';
+                this.saveStatus.className = 'save-status';
+            }, 2000);
+
+            // Handle blockchain toggle
+            if (newPrefs.blockchainEnabled) {
+                if (!walletManager.getConnectedWallet()) {
+                    this.checkWalletConnection();
+                }
+            } else {
+                // If disabled, we don't necessarily disconnect (user might want to keep wallet connected for other things)
+                // But we should update UI to reflect that features are disabled if we want to be strict.
+                // For now, let's just stop auto-connecting on reload (which is handled by init).
+                // If the user explicitly disables it, maybe we should clear the blockchain data from view?
+                console.log('Blockchain features disabled.');
+            }
+
+        } catch (error) {
+            console.error('Failed to save preferences:', error);
+            this.saveStatus.textContent = 'Error saving';
+            this.saveStatus.className = 'save-status error';
+        }
+    }
+
+    async handleClearData() {
+        if (!confirm('Are you sure you want to delete ALL consent history? This cannot be undone.')) {
+            return;
+        }
+
+        try {
+            await this.dataService.clearData();
+            alert('All data cleared successfully.');
+            this.loadData(); // Refresh view
+        } catch (error) {
+            console.error('Failed to clear data:', error);
+            alert('Failed to clear data: ' + error.message);
+        }
+    }
+
+    async handleSimulateConsent() {
+        try {
+            const simulatedConsent = {
+                siteDomain: 'simulated-test.com',
+                url: 'http://simulated-test.com/page',
+                termsHash: '0x' + Array(64).fill('0').join(''),
+                accepted: true,
+                decisionType: 'accept',
+                timestamp: Date.now(),
+                userAgent: navigator.userAgent,
+                preferences: { analytics: false },
+                automationSource: 'Manual Simulation'
+            };
+
+            // Use DataService to send request (handles both extension and bridge modes)
+            const response = await this.dataService.request('CONSENT_CAPTURED', {
+                consent: simulatedConsent
+            });
+
+            if (response && response.success === false) {
+                throw new Error(response.error || 'Unknown error');
+            }
+
+            alert('Simulated consent event sent! Refreshing...');
+
+            // Wait a bit then reload
+            setTimeout(() => this.loadData(), 1000);
+
+        } catch (error) {
+            console.error('Failed to simulate consent:', error);
+            alert('Failed to simulate consent: ' + error.message);
+        }
+    }
+
+    async handleForceBatchAction() {
+        try {
+            if (!confirm('This will bundle all pending consents and submit them to the blockchain. Continue?')) {
+                return;
+            }
+
+            const btn = document.getElementById('forceBatchButton');
+            if (btn) {
+                btn.textContent = '⏳ Preparing...';
+                btn.disabled = true;
+            }
+
+            // 1. Get batch data from background
+            console.log('Requesting batch preparation...');
+            const response = await this.dataService.request('PREPARE_BATCH');
+
+            if (!response.success) {
+                throw new Error(response.error || 'Failed to prepare batch');
+            }
+
+            const batchData = response.data;
+            console.log('Batch prepared:', batchData);
+
+            if (batchData.count === 0) {
+                alert('No consents ready to batch.');
+                if (btn) {
+                    btn.textContent = '⚡ Force Batch';
+                    btn.disabled = false;
+                }
+                return;
+            }
+
+            if (btn) btn.textContent = '✍️ Signing...';
+
+            // 2. Submit to blockchain using dashboard's wallet connection
+            // We use myTermsEthers directly since we are in the dashboard context
+            const txResult = await myTermsEthers.submitConsentBatch(
+                batchData.sites,
+                batchData.hashes
+            );
+
+            console.log('Batch submitted:', txResult);
+
+            if (btn) btn.textContent = '💾 Finalizing...';
+
+            // 3. Notify background to mark as batched
+            const completeResponse = await this.dataService.request('BATCH_COMPLETE', {
+                result: txResult,
+                batchData: batchData
+            });
+
+            if (!completeResponse.success) {
+                throw new Error(completeResponse.error || 'Failed to finalize batch');
+            }
+
+            alert(`Success! Batch of ${batchData.count} consents submitted.\nTx: ${txResult.hash}`);
+
+            // Refresh data
+            this.loadData();
+
+        } catch (error) {
+            console.error('Force batch failed:', error);
+            alert('Batch failed: ' + error.message);
+        } finally {
+            const btn = document.getElementById('forceBatchButton');
+            if (btn) {
+                btn.textContent = '⚡ Force Batch';
+                btn.disabled = false;
+            }
+        }
+    }
+
+    async loadMore() {
+        try {
+            this.loadMoreBtn.classList.add('loading');
+            this.loadMoreBtn.textContent = 'Loading...';
+
+            // Calculate current offset based on displayed items
+            const currentCount = document.querySelectorAll('.timeline-item').length;
+
+            const data = await this.dataService.getConsentData(50, currentCount);
+
+            if (data.consents && data.consents.length > 0) {
+                this.renderTimeline(data.consents, true); // true = append
+            } else {
+                this.loadMoreBtn.textContent = 'No more events';
+                this.loadMoreBtn.disabled = true;
+            }
+
+            this.loadMoreBtn.classList.remove('loading');
+            if (!this.loadMoreBtn.disabled) this.loadMoreBtn.textContent = 'Load More Events';
+
+        } catch (error) {
+            console.error('Failed to load more:', error);
+            this.loadMoreBtn.textContent = 'Error loading more';
+            this.loadMoreBtn.classList.remove('loading');
+        }
+    }
+
+    // Wallet Connection
+    async connectWallet() {
+        try {
+            // Check if MetaMask is installed
+            if (typeof window.ethereum === 'undefined') {
+                // If not found, it might be loading asynchronously. Wait a bit.
+                await new Promise(resolve => setTimeout(resolve, 500));
+                if (typeof window.ethereum === 'undefined') {
+                    alert('MetaMask not found! Please install MetaMask extension.');
+                    return;
+                }
+            }
+            this.walletStatus.innerHTML = '<span>Connecting...</span>';
+            await walletManager.connectWallet('metamask');
+        } catch (error) {
+            console.error('Failed to connect:', error);
+            this.walletStatus.innerHTML = '<span class="error">Connection Failed</span>';
+            alert('Failed to connect wallet: ' + error.message);
+        }
+    }
+
+    updateWalletUI(wallet) {
+        if (wallet && wallet.account) {
+            const shortAddr = `${wallet.account.substring(0, 6)}...${wallet.account.substring(38)}`;
+            this.walletStatus.className = 'wallet-status connected';
+            this.walletStatus.innerHTML = `
+                <button class="connect-btn" id="forceBatchButton" style="margin-right: 10px; background: rgba(255, 255, 255, 0.1);">
+                    ⚡ Force Batch
+                </button>
+                <div class="wallet-info">
+                    <span class="network-badge">${wallet.network?.name || 'Unknown'}</span>
+                    <span class="address" title="${wallet.account}">${shortAddr}</span>
+                </div>
+            `;
+            // Re-attach listener for force batch
+            document.getElementById('forceBatchButton').addEventListener('click', () => this.handleForceBatchAction());
+
+            if (this.connectBtn) this.connectBtn.style.display = 'none';
+        } else {
+            this.walletStatus.className = 'wallet-status';
+            this.walletStatus.innerHTML = `
+                <button class="connect-btn" id="forceBatchButton" style="margin-right: 10px; background: rgba(255, 255, 255, 0.1);">
+                    ⚡ Force Batch
+                </button>
+                <button class="connect-btn" id="connectButton">
+                    🔗 Connect Wallet
+                </button>
+            `;
+            // Re-attach listeners since we replaced innerHTML
+            document.getElementById('connectButton').addEventListener('click', () => this.connectWallet());
+            document.getElementById('forceBatchButton').addEventListener('click', () => this.handleForceBatchAction());
+            this.connectBtn = document.getElementById('connectButton');
+            this.forceBatchBtn = document.getElementById('forceBatchButton');
+        }
+    }
+
+    clearBlockchainData() {
+        // Reset stats that depend on blockchain
+        this.stats.txs.textContent = '--';
+        // Reload local data to ensure we still show what we have
+        this.loadData();
+    }
 
     async loadData() {
         try {
@@ -293,7 +935,7 @@ class DashboardApp {
             this.updateCharts(sitesData); // Use full sites data
 
             // Check for load more
-            if (newConsents.length < this.limit) {
+            if (data.consents.length < this.limit) {
                 this.loadMoreBtn.style.display = 'none';
             } else {
                 this.loadMoreBtn.style.display = 'block';
