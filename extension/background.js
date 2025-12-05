@@ -321,6 +321,33 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  // GET_COOKIES - from dashboard
+  if (request.type === 'GET_COOKIES') {
+    const domain = request.domain;
+    if (!domain) {
+      sendResponse({ error: 'Domain required' });
+      return true;
+    }
+
+    chrome.cookies.getAll({ domain }, (cookies) => {
+      sendResponse({ cookies });
+    });
+    return true;
+  }
+
+  // DELETE_COOKIE - from dashboard
+  if (request.type === 'DELETE_COOKIE') {
+    const { url, name, storeId } = request;
+    chrome.cookies.remove({ url, name, storeId }, (details) => {
+      if (details) {
+        sendResponse({ success: true, details });
+      } else {
+        sendResponse({ success: false, error: chrome.runtime.lastError?.message || 'Failed to remove cookie' });
+      }
+    });
+    return true;
+  }
+
   // FORCE_BATCH - from popup/dashboard
   if (request.type === 'FORCE_BATCH') {
     consentManager.checkAndProcessBatch()

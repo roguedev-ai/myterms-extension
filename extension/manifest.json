@@ -1,15 +1,16 @@
 {
   "manifest_version": 3,
-  "name": "MyTerms Consent Manager",
-  "version": "0.1.0",
-  "description": "Automates cookie consent preferences and logs them to blockchain",
+  "name": "ConsentChain",
+  "version": "1.0",
+  "description": "Your Privacy, On-Chain. Automated consent management and cookie control.",
   "permissions": [
     "activeTab",
     "storage",
     "scripting",
     "tabs",
     "notifications",
-    "alarms"
+    "alarms",
+    "cookies"
   ],
   "host_permissions": [
     "https://*/*",
@@ -38,7 +39,7 @@
   ],
   "action": {
     "default_popup": "popup/index.html",
-    "default_title": "MyTerms",
+    "default_title": "ConsentChain",
     "default_icon": {
       "16": "icons/icon16.png",
       "32": "icons/icon32.png",

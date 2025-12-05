@@ -87,6 +87,27 @@ class DataService {
         }
     }
 
+    async getCookies(domain) {
+        if (!domain) return { cookies: [] };
+        try {
+            const response = await this.request('GET_COOKIES', { domain });
+            return response.cookies || [];
+        } catch (e) {
+            console.error('Failed to get cookies:', e);
+            return [];
+        }
+    }
+
+    async deleteCookie(url, name, storeId) {
+        try {
+            const response = await this.request('DELETE_COOKIE', { url, name, storeId });
+            return response.success;
+        } catch (e) {
+            console.error('Failed to delete cookie:', e);
+            return false;
+        }
+    }
+
     async request(type, payload = {}) {
         if (this.isExtensionContext) {
             // Use direct chrome.runtime.sendMessage
@@ -960,6 +981,78 @@ class DashboardApp {
         this.updateCharts(consents);
     }
 
+    async loadCookiesForEvent(domain, url, containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        container.innerHTML = '<span class="loading-text">Loading cookies...</span>';
+
+        try {
+            const cookies = await this.dataService.getCookies(domain);
+
+            if (cookies.length === 0) {
+                container.innerHTML = '<span class="no-data">No cookies found for this domain.</span>';
+                return;
+            }
+
+            let html = `<div class="cookie-list">
+                <div class="cookie-header">
+                    <span>Found ${cookies.length} cookies</span>
+                    <button class="danger-btn small" onclick="window.dashboardApp.deleteAllCookies('${domain}', '${url}', '${containerId}')">Delete All</button>
+                </div>`;
+
+            cookies.forEach(cookie => {
+                html += `
+                    <div class="cookie-item">
+                        <div class="cookie-info">
+                            <span class="cookie-name">${cookie.name}</span>
+                            <span class="cookie-domain">${cookie.domain}</span>
+                        </div>
+                        <button class="icon-btn delete-cookie" title="Delete" 
+                            onclick="window.dashboardApp.deleteSingleCookie('${url}', '${cookie.name}', '${cookie.storeId}', this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            container.innerHTML = html;
+
+        } catch (error) {
+            console.error('Error loading cookies:', error);
+            container.innerHTML = '<span class="error-text">Failed to load cookies</span>';
+        }
+    }
+
+    async deleteSingleCookie(url, name, storeId, btnElement) {
+        if (!confirm(`Delete cookie "${name}"?`)) return;
+
+        const success = await this.dataService.deleteCookie(url, name, storeId);
+        if (success) {
+            // Remove the row
+            const row = btnElement.closest('.cookie-item');
+            if (row) row.remove();
+        } else {
+            alert('Failed to delete cookie');
+        }
+    }
+
+    async deleteAllCookies(domain, url, containerId) {
+        if (!confirm(`Delete ALL cookies for ${domain}?`)) return;
+
+        const cookies = await this.dataService.getCookies(domain);
+        let deletedCount = 0;
+
+        for (const cookie of cookies) {
+            const success = await this.dataService.deleteCookie(url, cookie.name, cookie.storeId);
+            if (success) deletedCount++;
+        }
+
+        alert(`Deleted ${deletedCount} cookies.`);
+        this.loadCookiesForEvent(domain, url, containerId); // Reload
+    }
+
     renderTimelineChart(consents) {
         const ctx = document.getElementById('timelineChart').getContext('2d');
 
@@ -1047,38 +1140,36 @@ class DashboardApp {
         sorted.forEach(consent => {
             const item = document.createElement('div');
             item.className = 'timeline-item';
-
-            const date = new Date(consent.timestamp).toLocaleString();
-            const isAccept = consent.decisionType === 'accept';
-
             item.innerHTML = `
-                <div class="timeline-icon ${isAccept ? 'accept' : 'decline'}">
-                    ${isAccept ? '✓' : '✕'}
+                <div class="timeline-icon ${consent.decisionType}">
+                    ${consent.decisionType === 'accept' ? '<i class="fas fa-check"></i>' : '<i class="fas fa-times"></i>'}
                 </div>
                 <div class="timeline-content">
-                    <div class="timeline-hash-hero">
-                        <div class="hash-label">Terms Hash</div>
-                        <div class="hash-value" title="${consent.termsHash}">${consent.termsHash}</div>
+                    <div class="timeline-header">
+                        <span class="site-domain">${consent.siteDomain}</span>
+                        <span class="time">${new Date(consent.timestamp).toLocaleString()}</span>
                     </div>
                     <div class="timeline-details">
-                        <div class="timeline-detail-item">
-                            <span class="detail-label">Website:</span>
-                            <span class="site-name">${consent.siteDomain}</span>
+                        <div class="detail-row">
+                            <span class="label">Decision:</span>
+                            <span class="value ${consent.decisionType}">${consent.decisionType.toUpperCase()}</span>
                         </div>
-                        <div class="timeline-detail-item">
-                            <span class="detail-label">Decision:</span>
-                            <span class="decision-badge ${isAccept ? 'accept' : 'decline'}">
-                                ${isAccept ? '✓ Accepted' : '✕ Declined'}
-                            </span>
+                        <div class="detail-row">
+                            <span class="label">Hash:</span>
+                            <span class="value hash" title="${consent.termsHash}">${consent.termsHash.substring(0, 10)}...</span>
                         </div>
-                        <div class="timeline-detail-item">
-                            <span class="detail-label">Date:</span>
-                            <span class="date">${date}</span>
+                        <div class="detail-row">
+                            <span class="label">Status:</span>
+                            <span class="value status ${status.toLowerCase()}">${status}</span>
+                        </div>
+                        <div class="cookie-section" id="cookies-${consent.timestamp}">
+                            <button class="secondary-btn small" onclick="window.dashboardApp.loadCookiesForEvent('${consent.siteDomain}', '${consent.url}', 'cookies-${consent.timestamp}')">
+                                🍪 View Cookies
+                            </button>
                         </div>
                     </div>
                 </div>
             `;
-
             this.timelineTimeline.appendChild(item);
         });
     }

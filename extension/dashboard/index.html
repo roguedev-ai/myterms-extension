@@ -4,23 +4,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MyTerms Consent Dashboard</title>
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>ConsentChain Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
     <div class="app-container">
+        <aside class="sidebar">
+            <div class="logo-area">
+                <i class="fas fa-shield-alt"></i>
+                <h1>ConsentChain</h1>
+            </div>
+            <div class="subtitle">Privacy Consent Ledger Dashboard</div>
+        </aside>
+
         <!-- Header -->
         <header class="header">
             <div class="header-content">
-                <div class="branding">
-                    <div class="logo">
-                        <div class="logo-icon">🛡️</div>
-                        <h1>MyTerms</h1>
-                    </div>
-                    <div class="subtitle">Privacy Consent Ledger Dashboard</div>
-                </div>
                 <div class="wallet-status" id="walletStatus" style="display: flex; align-items: center; gap: 10px;">
                     <button class="connect-btn" id="forceBatchButton" style="background: rgba(255, 255, 255, 0.1);">
                         ⚡ Force Batch

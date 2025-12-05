@@ -384,14 +384,18 @@ class EnhancedBannerDetector {
       'button:contains("Continue without accepting")', 'a:contains("Continue without accepting")',
       'button:contains("Continue without agreeing")', 'a:contains("Continue without agreeing")',
       'button:contains("Use necessary cookies only")', 'a:contains("Use necessary cookies only")',
-      '[aria-label*="continue without"]',
+      'button:contains("Necessary only")', 'a:contains("Necessary only")',
+      'button:contains("Only necessary")', 'a:contains("Only necessary")',
+      'button:contains("Reject all")', 'a:contains("Reject all")',
+      '[aria-label*="continue without"]', '[aria-label*="necessary only"]',
 
       // Close buttons that might act as "ignore/decline"
       'button[aria-label="Close"]', '.close-banner', '.dismiss-banner',
 
       // Framework specific
       '.fc-secondary-button', '.cc-deny-all', '.cmp-reject-all',
-      '.osano-cm-denyAll', '#onetrust-reject-all-handler'
+      '.osano-cm-denyAll', '#onetrust-reject-all-handler',
+      '.osano-cm-save-preferences', // Sometimes save prefs is the way to "reject" non-essential
     ];
 
     return await this.clickButton(bannerElement, declineSelectors, 'decline');
