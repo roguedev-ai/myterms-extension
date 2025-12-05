@@ -304,6 +304,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  // GET_ALL_SITES_DATA - from dashboard
+  if (request.type === 'GET_ALL_SITES_DATA') {
+    consentManager.getAllSitesData()
+      .then(sites => sendResponse({ sites }))
+      .catch(error => sendResponse({ error: error.message }));
+    return true;
+  }
+
   // GET_POPUP_DATA - from popup
   if (request.type === 'GET_POPUP_DATA') {
     Promise.all([
