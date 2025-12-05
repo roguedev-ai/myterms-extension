@@ -295,6 +295,12 @@ select:focus {
   min-height: 400px;
 }
 
+.timeline-timeline {
+  position: relative;
+  width: 100%;
+  z-index: 10;
+}
+
 /* Timeline Items */
 .timeline-item {
   display: flex;
