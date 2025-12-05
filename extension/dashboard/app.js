@@ -548,10 +548,16 @@ class DashboardApp {
         // Preferences
         this.savePreferencesBtn.addEventListener('click', () => this.savePreferences());
 
-        // Clear Data
+        // Clear Data (Error Modal)
         const clearBtn = document.getElementById('clearDataBtn');
         if (clearBtn) {
             clearBtn.addEventListener('click', () => this.handleClearData());
+        }
+
+        // Clear Data (Preferences)
+        const clearBtnMain = document.getElementById('clearDataBtnMain');
+        if (clearBtnMain) {
+            clearBtnMain.addEventListener('click', () => this.handleClearData());
         }
 
         this.simulateBtn = document.getElementById('simulateConsentBtn');
@@ -1238,7 +1244,7 @@ class DashboardApp {
                         </div>
                         <div class="detail-row">
                             <span class="label">Hash:</span>
-                            <span class="value hash" title="${consent.termsHash}">${consent.termsHash.substring(0, 10)}...</span>
+                            <span class="value hash" title="${consent.termsHash || 'N/A'}">${consent.termsHash ? consent.termsHash.substring(0, 10) + '...' : 'N/A'}</span>
                         </div>
                         <div class="detail-row">
                             <span class="label">Status:</span>
