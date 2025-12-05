@@ -306,6 +306,16 @@ select:focus {
   box-shadow: 0 4px 12px var(--shadow-light);
   border-left: 4px solid #667eea;
   transition: var(--transition);
+  opacity: 1;
+  /* Ensure visibility */
+  transform: translateY(0);
+}
+
+.no-data-message {
+  text-align: center;
+  padding: 2rem;
+  color: var(--text-secondary);
+  font-style: italic;
 }
 
 .timeline-item:hover {

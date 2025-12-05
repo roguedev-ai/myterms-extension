@@ -48,7 +48,9 @@ const server = http.createServer((req, res) => {
         }
         console.log(`[DEBUG] Request: ${reqUrl} -> Resolved: ${filePath}`);
         if (!fs.existsSync(filePath)) {
-            console.error(`[ERROR] File not found: ${filePath}`);
+            if (!filePath.endsWith('.map')) {
+                console.error(`[ERROR] File not found: ${filePath}`);
+            }
         }
     } else {
         // Dashboard files

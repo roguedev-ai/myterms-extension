@@ -1214,8 +1214,22 @@ class DashboardApp {
 
     // Helper to keep existing methods intact while replacing the block
     renderTimeline(consents, append = false) {
+        console.log('Dashboard: renderTimeline called with', consents ? consents.length : 0, 'items');
+
+        if (!this.timelineTimeline) {
+            console.error('Dashboard: Timeline container not found!');
+            return;
+        }
+
         if (!append) {
             this.timelineTimeline.innerHTML = '';
+        }
+
+        if (!consents || consents.length === 0) {
+            if (!append) {
+                this.timelineTimeline.innerHTML = '<div class="no-data-message">No consent history found.</div>';
+            }
+            return;
         }
 
         // Sort by timestamp desc
@@ -1228,78 +1242,87 @@ class DashboardApp {
         }
 
         sorted.forEach(consent => {
-            const status = consent.decisionType === 'accept' ? 'Accepted' : 'Declined';
-            const item = document.createElement('div');
-            item.className = 'timeline-item';
-            item.innerHTML = `
-                <div class="timeline-icon ${consent.decisionType}">
-                    ${consent.decisionType === 'accept' ? '<i class="fas fa-check"></i>' : '<i class="fas fa-times"></i>'}
-                </div>
-                <div class="timeline-content">
-                    <div class="timeline-header">
-                        <span class="site-domain">${consent.siteDomain}</span>
-                        <span class="time">${new Date(consent.timestamp).toLocaleString()}</span>
+            try {
+                const status = consent.decisionType === 'accept' ? 'Accepted' : 'Declined';
+                const dateStr = new Date(consent.timestamp).toLocaleString();
+                const hashDisplay = consent.termsHash ? `${consent.termsHash.substring(0, 8)}...` : 'N/A';
+
+                const item = document.createElement('div');
+                item.className = 'timeline-item';
+                // Add data attributes for debugging
+                item.dataset.id = consent.timestamp;
+
+                item.innerHTML = `
+                    <div class="timeline-icon ${consent.decisionType || 'unknown'}">
+                        <i class="fas ${consent.decisionType === 'accept' ? 'fa-check' : 'fa-times'}"></i>
                     </div>
-                    <div class="timeline-details">
-                        <div class="detail-row">
-                            <span class="label">Decision:</span>
-                            <span class="value ${consent.decisionType}">${(consent.decisionType || 'unknown').toUpperCase()}</span>
+                    <div class="timeline-content">
+                        <div class="timeline-header">
+                            <span class="site-domain">${consent.siteDomain || 'Unknown Site'}</span>
+                            <span class="time">${dateStr}</span>
                         </div>
-                        <div class="detail-row">
-                            <span class="label">Hash:</span>
-                            <span class="value hash" title="${consent.termsHash || 'N/A'}">${consent.termsHash ? consent.termsHash.substring(0, 10) + '...' : 'N/A'}</span>
-                        </div>
-                        <div class="detail-row">
-                            <span class="label">Status:</span>
-                            <span class="value status ${status.toLowerCase()}">${status}</span>
-                        </div>
-                        <div class="cookie-section" id="cookies-${consent.timestamp}">
-                            <button class="secondary-btn small view-cookies-btn" 
-                                data-domain="${consent.siteDomain}" 
-                                data-url="${consent.url}" 
-                                data-container="cookies-${consent.timestamp}">
-                                🍪 View Cookies
-                            </button>
+                        <div class="timeline-details">
+                            <div class="detail-row">
+                                <span class="label">Status:</span>
+                                <span class="value ${consent.decisionType || ''}">${status}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Hash:</span>
+                                <span class="value hash" title="${consent.termsHash || ''}">${hashDisplay}</span>
+                            </div>
+                            <div class="cookie-section" id="cookies-${consent.timestamp}">
+                                <button class="secondary-btn small view-cookies-btn" 
+                                    data-domain="${consent.siteDomain}" 
+                                    data-url="${consent.url}" 
+                                    data-container="cookies-${consent.timestamp}">
+                                    🍪 View Cookies
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `;
-            this.timelineTimeline.appendChild(item);
+                `;
+                this.timelineTimeline.appendChild(item);
+            } catch (err) {
+                console.error('Error rendering timeline item:', err, consent);
+            }
         });
+
+        console.log('Dashboard: Timeline rendering complete');
+    }
 
         // Add event delegation for cookie buttons
         this.timelineTimeline.addEventListener('click', (e) => {
-            // Handle View Cookies
-            if (e.target.classList.contains('view-cookies-btn')) {
-                const { domain, url, container } = e.target.dataset;
-                this.loadCookiesForEvent(domain, url, container);
-            }
+        // Handle View Cookies
+        if (e.target.classList.contains('view-cookies-btn')) {
+            const { domain, url, container } = e.target.dataset;
+            this.loadCookiesForEvent(domain, url, container);
+        }
 
-            // Handle Delete All Cookies
-            if (e.target.classList.contains('delete-all-cookies-btn')) {
-                const { domain, url, container } = e.target.dataset;
-                this.deleteAllCookies(domain, url, container);
-            }
+        // Handle Delete All Cookies
+        if (e.target.classList.contains('delete-all-cookies-btn')) {
+            const { domain, url, container } = e.target.dataset;
+            this.deleteAllCookies(domain, url, container);
+        }
 
-            // Handle Delete Single Cookie
-            if (e.target.closest('.delete-cookie-btn')) {
-                const btn = e.target.closest('.delete-cookie-btn');
-                const { url, name, storeid } = btn.dataset;
-                this.deleteSingleCookie(url, name, storeid, btn);
-            }
-        });
+        // Handle Delete Single Cookie
+        if (e.target.closest('.delete-cookie-btn')) {
+            const btn = e.target.closest('.delete-cookie-btn');
+            const { url, name, storeid } = btn.dataset;
+            this.deleteSingleCookie(url, name, storeid, btn);
+        }
+    });
     }
 
-    renderSites(sitesData) {
-        this.sitesGrid.innerHTML = '';
+renderSites(sitesData) {
+    this.sitesGrid.innerHTML = '';
 
-        // Sort by visit count desc
-        const sortedSites = [...sitesData].sort((a, b) => b.count - a.count);
+    // Sort by visit count desc
+    const sortedSites = [...sitesData].sort((a, b) => b.count - a.count);
 
-        sortedSites.forEach(data => {
-            const card = document.createElement('div');
-            card.className = 'site-card';
-            card.innerHTML = `
+    sortedSites.forEach(data => {
+        const card = document.createElement('div');
+        card.className = 'site-card';
+        card.innerHTML = `
                 <h3>${data.domain}</h3>
                 <div class="site-stats">
                     <div class="site-stat">
@@ -1313,69 +1336,69 @@ class DashboardApp {
                 </div>
                 <div class="last-visit">Last: ${new Date(data.lastVisit).toLocaleDateString()}</div>
             `;
-            this.sitesGrid.appendChild(card);
-        });
-    }
+        this.sitesGrid.appendChild(card);
+    });
+}
 
-    initCharts() {
-        // Decisions Chart
-        const ctx1 = document.getElementById('decisionsChart').getContext('2d');
-        this.decisionsChart = new Chart(ctx1, {
-            type: 'doughnut',
-            data: {
-                labels: ['Accepted', 'Declined'],
-                datasets: [{
-                    data: [0, 0],
-                    backgroundColor: ['#4CAF50', '#F44336']
-                }]
-            }
-        });
+initCharts() {
+    // Decisions Chart
+    const ctx1 = document.getElementById('decisionsChart').getContext('2d');
+    this.decisionsChart = new Chart(ctx1, {
+        type: 'doughnut',
+        data: {
+            labels: ['Accepted', 'Declined'],
+            datasets: [{
+                data: [0, 0],
+                backgroundColor: ['#4CAF50', '#F44336']
+            }]
+        }
+    });
 
-        // Sites Chart
-        const ctx2 = document.getElementById('sitesChart').getContext('2d');
-        this.sitesChart = new Chart(ctx2, {
-            type: 'bar',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Consents',
-                    data: [],
-                    backgroundColor: '#2196F3'
-                }]
-            }
-        });
-    }
+    // Sites Chart
+    const ctx2 = document.getElementById('sitesChart').getContext('2d');
+    this.sitesChart = new Chart(ctx2, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Consents',
+                data: [],
+                backgroundColor: '#2196F3'
+            }]
+        }
+    });
+}
 
-    updateCharts(sitesData) {
-        // 1. Decisions Chart
-        let accepted = 0;
-        let declined = 0;
+updateCharts(sitesData) {
+    // 1. Decisions Chart
+    let accepted = 0;
+    let declined = 0;
 
-        sitesData.forEach(site => {
-            accepted += site.accepted;
-            declined += site.declined;
-        });
+    sitesData.forEach(site => {
+        accepted += site.accepted;
+        declined += site.declined;
+    });
 
-        this.decisionsChart.data.datasets[0].data = [accepted, declined];
-        this.decisionsChart.update();
+    this.decisionsChart.data.datasets[0].data = [accepted, declined];
+    this.decisionsChart.update();
 
-        // 2. Sites Chart (Top 10)
-        const topSites = [...sitesData].sort((a, b) => b.count - a.count).slice(0, 10);
+    // 2. Sites Chart (Top 10)
+    const topSites = [...sitesData].sort((a, b) => b.count - a.count).slice(0, 10);
 
-        this.sitesChart.data.labels = topSites.map(s => s.domain);
-        this.sitesChart.data.datasets[0].data = topSites.map(s => s.count);
-        this.sitesChart.update();
-    }
+    this.sitesChart.data.labels = topSites.map(s => s.domain);
+    this.sitesChart.data.datasets[0].data = topSites.map(s => s.count);
+    this.sitesChart.update();
+}
 
-    clearData() {
-        this.stats.total.textContent = '--';
-        this.stats.sites.textContent = '--';
-        this.stats.txs.textContent = '--';
-        this.stats.score.textContent = '--';
-        this.timelineTimeline.innerHTML = '';
-        this.sitesGrid.innerHTML = '';
-        this.noDataMsg.style.display = 'flex';
-    }
+clearData() {
+    this.stats.total.textContent = '--';
+    this.stats.sites.textContent = '--';
+    this.stats.txs.textContent = '--';
+    this.stats.score.textContent = '--';
+    this.timelineTimeline.innerHTML = '';
+    this.sitesGrid.innerHTML = '';
+    this.noDataMsg.style.display = 'flex';
+}
 }
 
 // Initialize
