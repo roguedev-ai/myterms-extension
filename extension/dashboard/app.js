@@ -1152,7 +1152,7 @@ class DashboardApp {
                     <div class="timeline-details">
                         <div class="detail-row">
                             <span class="label">Decision:</span>
-                            <span class="value ${consent.decisionType}">${consent.decisionType.toUpperCase()}</span>
+                            <span class="value ${consent.decisionType}">${(consent.decisionType || 'unknown').toUpperCase()}</span>
                         </div>
                         <div class="detail-row">
                             <span class="label">Hash:</span>
