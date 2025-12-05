@@ -92,8 +92,8 @@ class ConsentManager {
   async getStats() {
     try {
       const db = await consentStorage.waitForDB();
-      const transaction = db.transaction(['consents'], 'readonly');
-      const store = transaction.objectStore('consents');
+      const transaction = db.transaction(['consentQueue'], 'readonly');
+      const store = transaction.objectStore('consentQueue');
 
       return new Promise((resolve, reject) => {
         const request = store.getAll();
