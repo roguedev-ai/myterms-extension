@@ -411,6 +411,50 @@ class ConsentStorage {
     }
   }
 
+  // Get aggregated sites data
+  async getAllSitesData() {
+    try {
+      const db = await this.waitForDB();
+      const transaction = db.transaction([CONSENT_STORE], 'readonly');
+      const store = transaction.objectStore(CONSENT_STORE);
+
+      return new Promise((resolve, reject) => {
+        const request = store.getAll();
+
+        request.onsuccess = (event) => {
+          const consents = event.target.result;
+          const sites = {};
+
+          consents.forEach(c => {
+            if (!sites[c.siteDomain]) {
+              sites[c.siteDomain] = {
+                domain: c.siteDomain,
+                count: 0,
+                accepted: 0,
+                declined: 0,
+                lastVisit: 0
+              };
+            }
+            sites[c.siteDomain].count++;
+            if (c.decisionType === 'accept') sites[c.siteDomain].accepted++;
+            else sites[c.siteDomain].declined++;
+
+            if (c.timestamp > sites[c.siteDomain].lastVisit) {
+              sites[c.siteDomain].lastVisit = c.timestamp;
+            }
+          });
+
+          resolve(Object.values(sites));
+        };
+
+        request.onerror = (event) => reject(event.target.error);
+      });
+    } catch (error) {
+      console.error('Error getting all sites data:', error);
+      throw error;
+    }
+  }
+
   // Get batch statistics
   async getBatchStats() {
     try {

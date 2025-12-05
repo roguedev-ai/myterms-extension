@@ -87,6 +87,20 @@ class DataService {
         }
     }
 
+    async getAllSitesData() {
+        try {
+            const response = await this.request('GET_ALL_SITES_DATA');
+            if (response.error) throw new Error(response.error);
+            return response.sites || [];
+        } catch (e) {
+            console.warn('Failed to get sites data via message, falling back', e);
+            if (this.isExtensionContext) {
+                return await consentStorage.getAllSitesData();
+            }
+            return [];
+        }
+    }
+
     async getCookies(domain) {
         if (!domain) return { cookies: [] };
         try {
@@ -168,8 +182,8 @@ class DataService {
         return response;
     }
 
-    async prepareBatch() {
-        const response = await this.request('PREPARE_BATCH');
+    async prepareBatch(force = false) {
+        const response = await this.request('PREPARE_BATCH', { force });
         if (!response.success) throw new Error(response.error);
         return response.data;
     }
@@ -314,8 +328,8 @@ class DashboardApp {
 
             statusMsg.textContent = 'Preparing batch data...';
 
-            // 2. Prepare Batch
-            const batchData = await this.dataService.prepareBatch();
+            // 2. Prepare Batch (FORCE it)
+            const batchData = await this.dataService.prepareBatch(true);
 
 
             statusMsg.textContent = `Signing transaction for ${batchData.count} consents...`;
@@ -427,7 +441,7 @@ class DashboardApp {
             };
 
             // Re-fetch batch data since we lost it in the scope
-            const batchData = await this.dataService.prepareBatch();
+            const batchData = await this.dataService.prepareBatch(true);
 
             await this.dataService.finalizeBatch(txResult, batchData);
 
@@ -883,51 +897,58 @@ class DashboardApp {
 
     async loadData() {
         try {
-            this.refreshBtn.classList.add('spinning');
+            this.showLoading(true);
 
-            // Get data from service (limit 50 for initial load)
-            const [data, stats] = await Promise.all([
-                this.dataService.getConsentData(50, 0),
-                this.dataService.request('GET_STATS')
-            ]);
+            // Fetch paginated consents for timeline
+            const data = await this.dataService.getConsentData(this.limit, this.offset);
+            this.consents = this.offset === 0 ? data.consents : [...this.consents, ...data.consents];
 
-            this.processData(data.consents, data.batches, stats);
+            // Fetch aggregated sites data for charts and sites view
+            const sitesData = await this.dataService.getAllSitesData();
 
-            this.refreshBtn.classList.remove('spinning');
+            // Update UI
+            // Actually getStats in background returns totals, so we should use that for stats
+            const stats = await this.dataService.request('GET_STATS');
+            if (!stats.error) {
+                this.updateDashboardStats(stats);
+            }
+
+            this.renderTimeline(this.consents, this.offset > 0);
+            this.renderSites(sitesData); // Use full sites data
+            this.updateCharts(sitesData); // Use full sites data
+
+            // Check for load more
+            if (data.consents.length < this.limit) {
+                this.loadMoreBtn.style.display = 'none';
+            } else {
+                this.loadMoreBtn.style.display = 'block';
+            }
+
         } catch (error) {
             console.error('Failed to load data:', error);
-            this.refreshBtn.classList.remove('spinning');
+            this.showError('Failed to load data: ' + error.message);
+        } finally {
+            this.showLoading(false);
+        }
+    }
 
-            // Show helpful message based on context
-            if (!this.dataService.isExtensionContext && error.message.includes('timed out')) {
-                // Blockchain dashboard (localhost) with bridge timeout
-                const extensionDashboardLink = (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL)
-                    ? `<a href="${chrome.runtime.getURL('dashboard/index.html')}" style="color: #4CAF50; text-decoration: underline;">
-                        Or try the Extension Dashboard →
-                       </a>`
-                    : `<span>Or try opening the Extension Dashboard from chrome://extensions</span>`;
+    updateDashboardStats(stats) {
+        if (this.stats.total) this.stats.total.textContent = stats.totalConsents || 0;
+        if (this.stats.sites) this.stats.sites.textContent = stats.totalSites || 0;
+        if (this.stats.txs) this.stats.txs.textContent = stats.totalBatches || 0;
 
-                this.noDataMsg.style.display = 'flex';
-                this.noDataMsg.innerHTML = `
-                    <div style="text-align: center; padding: 20px;">
-                        <h3 style="color: #f44336;">⚠️ Connection Issue</h3>
-                        <p>Unable to connect to the MyTerms extension.</p>
-                        <p style="margin-top: 15px;"><strong>Quick fix:</strong></p>
-                        <ol style="text-align: left; display: inline-block; margin: 10px auto;">
-                            <li>Go to <code>chrome://extensions</code></li>
-                            <li>Click reload on "MyTerms"</li>
-                            <li>Refresh this page</li>
-                        </ol>
-                        <p style="margin-top: 15px;">
-                            ${extensionDashboardLink}
-                        </p>
-                    </div>
-                `;
-            } else {
-                // Generic error
-                this.noDataMsg.style.display = 'flex';
-                this.noDataMsg.textContent = 'Failed to load data. Is the extension installed?';
-            }
+        // Calculate privacy score
+        const total = stats.totalConsents || 0;
+        const declined = stats.totalDeclined || 0;
+        const score = total === 0 ? 100 : Math.round((declined / total) * 100);
+
+        if (this.stats.score) {
+            this.stats.score.textContent = score;
+            // Color code score
+            this.stats.score.className = 'stat-value';
+            if (score >= 80) this.stats.score.classList.add('good');
+            else if (score >= 50) this.stats.score.classList.add('medium');
+            else this.stats.score.classList.add('bad');
         }
     }
 
@@ -1241,25 +1262,17 @@ class DashboardApp {
         });
     }
 
-    renderSites(consents) {
+    renderSites(sitesData) {
         this.sitesGrid.innerHTML = '';
 
-        const sites = {};
-        consents.forEach(c => {
-            if (!sites[c.siteDomain]) {
-                sites[c.siteDomain] = { count: 0, accepted: 0, declined: 0, lastVisit: 0 };
-            }
-            sites[c.siteDomain].count++;
-            if (c.decisionType === 'accept') sites[c.siteDomain].accepted++;
-            else sites[c.siteDomain].declined++;
-            if (c.timestamp > sites[c.siteDomain].lastVisit) sites[c.siteDomain].lastVisit = c.timestamp;
-        });
+        // Sort by visit count desc
+        const sortedSites = [...sitesData].sort((a, b) => b.count - a.count);
 
-        Object.entries(sites).forEach(([domain, data]) => {
+        sortedSites.forEach(data => {
             const card = document.createElement('div');
             card.className = 'site-card';
             card.innerHTML = `
-                <h3>${domain}</h3>
+                <h3>${data.domain}</h3>
                 <div class="site-stats">
                     <div class="site-stat">
                         <span class="label">Visits</span>
@@ -1305,26 +1318,24 @@ class DashboardApp {
         });
     }
 
-    updateCharts(consents) {
-        // Update Decisions Chart
-        const accepted = consents.filter(c => c.decisionType === 'accept').length;
-        const declined = consents.filter(c => c.decisionType === 'decline').length;
+    updateCharts(sitesData) {
+        // 1. Decisions Chart
+        let accepted = 0;
+        let declined = 0;
+
+        sitesData.forEach(site => {
+            accepted += site.accepted;
+            declined += site.declined;
+        });
 
         this.decisionsChart.data.datasets[0].data = [accepted, declined];
         this.decisionsChart.update();
 
-        // Update Sites Chart
-        const sites = {};
-        consents.forEach(c => {
-            sites[c.siteDomain] = (sites[c.siteDomain] || 0) + 1;
-        });
+        // 2. Sites Chart (Top 10)
+        const topSites = [...sitesData].sort((a, b) => b.count - a.count).slice(0, 10);
 
-        const sortedSites = Object.entries(sites)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5);
-
-        this.sitesChart.data.labels = sortedSites.map(s => s[0]);
-        this.sitesChart.data.datasets[0].data = sortedSites.map(s => s[1]);
+        this.sitesChart.data.labels = topSites.map(s => s.domain);
+        this.sitesChart.data.datasets[0].data = topSites.map(s => s.count);
         this.sitesChart.update();
     }
 
