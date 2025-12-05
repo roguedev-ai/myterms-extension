@@ -504,6 +504,11 @@ class DashboardApp {
             clearBtn.addEventListener('click', () => this.handleClearData());
         }
 
+        this.simulateBtn = document.getElementById('simulateConsentBtn');
+        if (this.simulateBtn) {
+            this.simulateBtn.addEventListener('click', () => this.handleSimulateConsent());
+        }
+
         // Network Switching
         const networkSelect = document.getElementById('networkSelect');
         if (networkSelect) {
@@ -655,6 +660,41 @@ class DashboardApp {
         } catch (error) {
             console.error('Failed to clear data:', error);
             alert('Failed to clear data: ' + error.message);
+        }
+    }
+
+    async handleSimulateConsent() {
+        try {
+            const simulatedConsent = {
+                siteDomain: 'simulated-test.com',
+                url: 'http://simulated-test.com/page',
+                termsHash: '0x' + Array(64).fill('0').join(''),
+                accepted: true,
+                decisionType: 'accept',
+                timestamp: Date.now(),
+                userAgent: navigator.userAgent,
+                preferences: { analytics: false },
+                automationSource: 'Manual Simulation'
+            };
+
+            // Send via window.postMessage to go through content.js bridge
+            window.postMessage({
+                type: 'MYTERMS_WEB_REQ',
+                requestId: 'sim_' + Date.now(),
+                payload: {
+                    type: 'CONSENT_CAPTURED',
+                    consent: simulatedConsent
+                }
+            }, '*');
+
+            alert('Simulated consent event sent! Check logs and refresh.');
+
+            // Wait a bit then reload
+            setTimeout(() => this.loadData(), 1000);
+
+        } catch (error) {
+            console.error('Failed to simulate consent:', error);
+            alert('Failed to simulate consent: ' + error.message);
         }
     }
 
