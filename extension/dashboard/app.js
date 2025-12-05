@@ -698,6 +698,78 @@ class DashboardApp {
         }
     }
 
+    async handleForceBatchAction() {
+        try {
+            if (!confirm('This will bundle all pending consents and submit them to the blockchain. Continue?')) {
+                return;
+            }
+
+            const btn = document.getElementById('forceBatchButton');
+            if (btn) {
+                btn.textContent = '⏳ Preparing...';
+                btn.disabled = true;
+            }
+
+            // 1. Get batch data from background
+            console.log('Requesting batch preparation...');
+            const response = await this.dataService.request('PREPARE_BATCH');
+
+            if (!response.success) {
+                throw new Error(response.error || 'Failed to prepare batch');
+            }
+
+            const batchData = response.data;
+            console.log('Batch prepared:', batchData);
+
+            if (batchData.count === 0) {
+                alert('No consents ready to batch.');
+                if (btn) {
+                    btn.textContent = '⚡ Force Batch';
+                    btn.disabled = false;
+                }
+                return;
+            }
+
+            if (btn) btn.textContent = '✍️ Signing...';
+
+            // 2. Submit to blockchain using dashboard's wallet connection
+            // We use myTermsEthers directly since we are in the dashboard context
+            const txResult = await myTermsEthers.submitConsentBatch(
+                batchData.sites,
+                batchData.hashes
+            );
+
+            console.log('Batch submitted:', txResult);
+
+            if (btn) btn.textContent = '💾 Finalizing...';
+
+            // 3. Notify background to mark as batched
+            const completeResponse = await this.dataService.request('BATCH_COMPLETE', {
+                result: txResult,
+                batchData: batchData
+            });
+
+            if (!completeResponse.success) {
+                throw new Error(completeResponse.error || 'Failed to finalize batch');
+            }
+
+            alert(`Success! Batch of ${batchData.count} consents submitted.\nTx: ${txResult.hash}`);
+
+            // Refresh data
+            this.loadData();
+
+        } catch (error) {
+            console.error('Force batch failed:', error);
+            alert('Batch failed: ' + error.message);
+        } finally {
+            const btn = document.getElementById('forceBatchButton');
+            if (btn) {
+                btn.textContent = '⚡ Force Batch';
+                btn.disabled = false;
+            }
+        }
+    }
+
     async loadMore() {
         try {
             this.loadMoreBtn.classList.add('loading');
