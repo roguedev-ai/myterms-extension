@@ -34,7 +34,7 @@ const server = http.createServer((req, res) => {
     let filePath;
 
     // Handle routes for utils, libs, and extension files
-    if (reqUrl.startsWith('/utils/') || reqUrl.startsWith('/libs/') || reqUrl.startsWith('/extension/')) {
+    if (reqUrl.startsWith('/utils/') || reqUrl.startsWith('/libs/') || reqUrl.startsWith('/extension/') || reqUrl.startsWith('/icons/')) {
         // Remove leading slash to ensure path.join works correctly
         const relativePath = reqUrl.startsWith('/') ? reqUrl.slice(1) : reqUrl;
         // If it starts with extension/, we don't need to add 'extension' again if we are relative to root

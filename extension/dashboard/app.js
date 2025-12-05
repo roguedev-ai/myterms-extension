@@ -141,6 +141,8 @@ class DataService {
             const requestId = Math.random().toString(36).substring(7);
             console.log(`DataService: Sending request ${requestId} (${type})`);
 
+            let timeoutId;
+
             const listener = (event) => {
                 if (event.source !== window ||
                     event.data.type !== 'MYTERMS_WEB_RES' ||
@@ -150,6 +152,7 @@ class DataService {
 
                 console.log(`DataService: Received bridge response for ${requestId}`);
                 window.removeEventListener('message', listener);
+                clearTimeout(timeoutId);
 
                 if (event.data.success) {
                     resolve(event.data.data);
@@ -168,7 +171,7 @@ class DataService {
             }, '*');
 
             // Timeout
-            setTimeout(() => {
+            timeoutId = setTimeout(() => {
                 window.removeEventListener('message', listener);
                 console.error(`DataService: Request ${requestId} timed out`);
                 reject(new Error('Request timed out'));
