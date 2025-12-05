@@ -79,6 +79,12 @@ body {
   line-height: 1.2;
 }
 
+.logo-img {
+  width: 64px;
+  height: 64px;
+  margin-right: 15px;
+}
+
 .logo-icon {
   font-size: 2rem;
   background: rgba(255, 255, 255, 0.2);
