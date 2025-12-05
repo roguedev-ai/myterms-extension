@@ -13,18 +13,21 @@ class EnhancedBannerDetector {
   }
 
   async init() {
-    // Prevent running on the dashboard itself to avoid self-consent loops
-    if (window.location.href.includes('dashboard/index.html') ||
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1') {
-      console.log('Enhanced Banner Detector: Skipping dashboard/localhost');
-      return;
-    }
-
     console.log('Enhanced Banner Detector initializing...');
 
     // Load user's MyTerms profile
     await this.loadMyTermsProfile();
+
+    // Listen for extension messages (CRITICAL for localhost bridge)
+    this.setupMessageListener();
+
+    // Prevent running banner detection on the dashboard itself to avoid self-consent loops
+    if (window.location.href.includes('dashboard/index.html') ||
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1') {
+      console.log('Enhanced Banner Detector: Skipping banner detection on dashboard/localhost');
+      return;
+    }
 
     // Start multiple detection methods
     this.observeDOMMutations();
@@ -33,9 +36,6 @@ class EnhancedBannerDetector {
 
     // Periodic checks for dynamic content
     setInterval(() => this.periodicBannerCheck(), 5000);
-
-    // Listen for extension messages
-    this.setupMessageListener();
 
     // Setup manual click listener for robustness
     this.setupManualClickListener();
