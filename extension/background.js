@@ -39,7 +39,7 @@ class ConsentManager {
     }, 24 * 60 * 60 * 1000); // 24 hours
   }
 
-  async checkAndProcessBatch() {
+  async checkAndProcessBatch(force = false) {
     if (this.processing) {
       console.log('Batch processing already in progress, skipping...');
       return;
@@ -49,22 +49,27 @@ class ConsentManager {
       // Check if enough time has passed since last batch
       const now = Date.now();
       const timeSinceLastBatch = this.lastBatchTime ? now - this.lastBatchTime : this.batchInterval;
-      const shouldProcess = timeSinceLastBatch >= this.batchInterval;
+      const shouldProcess = force || (timeSinceLastBatch >= this.batchInterval);
 
       if (!shouldProcess) {
         console.log(`Not yet time for batch. Time remaining: ${Math.round((this.batchInterval - timeSinceLastBatch) / (60 * 1000))} minutes`);
         return;
       }
 
-      console.log('Checking for consents ready for batch processing...');
+      console.log(`Checking for consents ready for batch processing (force=${force})...`);
 
       // Check if we have consents ready
-      const readyConsents = await consentStorage.getBatchReadyConsents(24);
+      // If force is true, we want all unbatched consents (threshold 0)
+      // Otherwise, we only want consents older than 24h
+      const threshold = force ? 0 : 24;
+      const readyConsents = await consentStorage.getBatchReadyConsents(threshold);
 
       if (readyConsents.length > 0) {
         // We can't auto-process because we need user signature
         // So we notify the user to open the popup
         this.notifyBatchReady(readyConsents.length);
+      } else if (force) {
+        console.log('No consents ready for batching even with force=true');
       }
 
     } catch (error) {
@@ -82,6 +87,51 @@ class ConsentManager {
       message: `${count} consents are ready to be secured on blockchain. Click to sign.`,
       requireInteraction: true
     });
+  }
+
+  async getStats() {
+    try {
+      const db = await consentStorage.waitForDB();
+      const transaction = db.transaction(['consents'], 'readonly');
+      const store = transaction.objectStore('consents');
+
+      return new Promise((resolve, reject) => {
+        const request = store.getAll();
+
+        request.onsuccess = (event) => {
+          const consents = event.target.result;
+          const totalConsents = consents.length;
+          const uniqueSites = new Set(consents.map(c => c.siteDomain)).size;
+          const totalDeclined = consents.filter(c => c.decisionType === 'decline').length;
+          const totalBatched = consents.filter(c => c.batched).length;
+
+          // Get batch stats for total batches
+          consentStorage.getBatchStats().then(batchStats => {
+            resolve({
+              totalConsents,
+              totalSites: uniqueSites,
+              totalDeclined,
+              totalBatched,
+              totalBatches: batchStats ? batchStats.totalBatches : 0
+            });
+          }).catch(err => {
+            // Fallback if batch stats fail
+            resolve({
+              totalConsents,
+              totalSites: uniqueSites,
+              totalDeclined,
+              totalBatched,
+              totalBatches: 0
+            });
+          });
+        };
+
+        request.onerror = (event) => reject(event.target.error);
+      });
+    } catch (error) {
+      console.error('Failed to get stats:', error);
+      throw error;
+    }
   }
 
   async prepareConsentBatch(force = false) {
@@ -350,7 +400,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   // FORCE_BATCH - from popup/dashboard
   if (request.type === 'FORCE_BATCH') {
-    consentManager.checkAndProcessBatch()
+    consentManager.checkAndProcessBatch(true)
       .then(() => sendResponse({ success: true }))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true;
