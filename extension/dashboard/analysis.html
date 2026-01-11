@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyTerms - Cookie Analysis</title>
+    <link rel="stylesheet" href="../styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .analysis-container {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 2rem;
+            padding: 2rem;
+        }
+
+        @media (max-width: 900px) {
+            .analysis-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .score-card {
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            border-radius: 16px;
+            padding: 2rem;
+            color: white;
+            text-align: center;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+
+        .score-value {
+            font-size: 4rem;
+            font-weight: 800;
+            line-height: 1;
+            margin: 1rem 0;
+        }
+
+        .score-label {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .monster-action-card {
+            background: #1f2937;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            border: 1px solid #374151;
+        }
+
+        .monster-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .monster-btn:hover {
+            background: #dc2626;
+            transform: scale(1.02);
+        }
+
+        .monster-btn:disabled {
+            background: #6b7280;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .chart-card {
+            background: #1f2937;
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid #374151;
+            height: 300px;
+            position: relative;
+        }
+
+        .cookie-list {
+            background: #1f2937;
+            border-radius: 12px;
+            border: 1px solid #374151;
+            overflow: hidden;
+            grid-column: 1 / -1;
+        }
+
+        .cookie-list h3 {
+            padding: 1.5rem;
+            margin: 0;
+            border-bottom: 1px solid #374151;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .cookie-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .cookie-table th,
+        .cookie-table td {
+            text-align: left;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid #374151;
+            color: #d1d5db;
+        }
+
+        .cookie-table th {
+            background: #111827;
+            font-weight: 600;
+            color: #9ca3af;
+        }
+
+        .tag {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .tag-Security {
+            background: #059669;
+            color: #fff;
+        }
+
+        .tag-Analytics {
+            background: #d97706;
+            color: #fff;
+        }
+
+        .tag-Marketing {
+            background: #dc2626;
+            color: #fff;
+        }
+
+        .tag-Functional {
+            background: #2563eb;
+            color: #fff;
+        }
+
+        .tag-Unknown {
+            background: #4b5563;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-900 text-gray-100">
+    <div class="sidebar">
+        <div class="logo-container">
+            <div class="logo-icon"></div>
+            <div class="logo-text">MyTerms</div>
+        </div>
+        <nav class="nav-menu">
+            <a href="index.html" class="nav-item">
+                <i class="icon-dashboard"></i> Dashboard
+            </a>
+            <a href="analysis.html" class="nav-item active">
+                <i class="icon-analytics"></i> Cookie Analysis
+            </a>
+            <a href="#" class="nav-item" id="nav-settings">
+                <i class="icon-settings"></i> Settings
+            </a>
+        </nav>
+    </div>
+
+    <main class="main-content">
+        <header class="header">
+            <div>
+                <h1 class="page-title">Cookie Analysis</h1>
+                <p class="page-subtitle">Understand and control your digital footprint</p>
+            </div>
+            <div class="header-actions">
+                <button id="refresh-btn" class="btn btn-secondary">
+                    Scan Now
+                </button>
+            </div>
+        </header>
+
+        <div class="analysis-container">
+            <!-- Left Column: Chart & List -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                <div class="chart-card">
+                    <canvas id="cookieChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Right Column: Actions & Score -->
+            <div style="display: flex; flex-direction: column; gap: 2rem;">
+                <div class="score-card">
+                    <div class="score-label">Global Privacy Score</div>
+                    <div class="score-value" id="privacy-score">--</div>
+                    <div id="score-text">Scanning...</div>
+                </div>
+
+                <div class="monster-action-card">
+                    <h3 style="margin-top: 0;">Cookie Monster</h3>
+                    <p style="color: #9ca3af; font-size: 0.9rem; margin-bottom: 1.5rem;">
+                        Eat all Analytics and Marketing cookies detected in your browser.
+                    </p>
+                    <button id="cookie-monster-btn" class="monster-btn">
+                        <span>🍪</span> Eat Cookies
+                    </button>
+                    <p id="monster-status" style="margin-top: 1rem; font-size: 0.85rem; height: 1.2rem;"></p>
+                </div>
+            </div>
+
+            <!-- Full Width: Details List -->
+            <div class="cookie-list">
+                <h3>Detected Cookies <span id="cookie-count"
+                        style="font-size: 0.9rem; color: #9ca3af; font-weight: 400;">0 total</span></h3>
+                <div style="max-height: 500px; overflow-y: auto;">
+                    <table class="cookie-table">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Domain</th>
+                                <th>Category</th>
+                                <th>Secure</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cookie-table-body">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module" src="app.js"></script>
+</body>
+
+</html>

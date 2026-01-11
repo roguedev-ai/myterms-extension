@@ -5,6 +5,7 @@ import { myTermsEthers } from './utils/ethers.js';
 import { consentStorage } from './utils/storage.js';
 import { DualChainManager } from './utils/dual-chain.js';
 import { AGREEMENT_TEMPLATES, MyTermsParser } from './utils/myterms.js';
+import CookieClassifier from './utils/cookie-classifier.js';
 
 class ConsentManager {
   constructor() {
@@ -495,6 +496,53 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       });
     });
     return true;
+  }
+
+  // ANALYZE_COOKIES - from dashboard
+  if (request.type === 'ANALYZE_COOKIES') {
+    const domain = request.domain; // Optional: filter by domain
+    const details = { domain };
+
+    // If no domain specified, get all cookies
+    chrome.cookies.getAll(domain ? { domain } : {}, (cookies) => {
+      const classifier = new CookieClassifier();
+      const report = classifier.analyze(cookies);
+      sendResponse({ success: true, report });
+    });
+    return true;
+  }
+
+  // COOKIE_MONSTER - "Me want cookie!" (Delete logic)
+  if (request.type === 'COOKIE_MONSTER') {
+    const { categories, domain } = request;
+    console.log(`Cookie Monster hungry for: ${categories.join(', ')}`);
+
+    chrome.cookies.getAll(domain ? { domain } : {}, (cookies) => {
+      const classifier = new CookieClassifier();
+      const report = classifier.analyze(cookies);
+
+      const cookiesToEat = report.cookies.filter(c => categories.includes(c.category));
+
+      let eatenCount = 0;
+      const promises = cookiesToEat.map(c => {
+        const url = `http${c.secure ? 's' : ''}://${c.domain.startsWith('.') ? c.domain.substring(1) : c.domain}${c.path}`;
+        return new Promise((resolve) => {
+          chrome.cookies.remove({
+            url: url,
+            name: c.name,
+            storeId: c.storeId
+          }, (details) => {
+            if (details) eatenCount++;
+            resolve();
+          });
+        });
+      });
+
+      Promise.all(promises).then(() => {
+        sendResponse({ success: true, eatenCount, totalFound: cookiesToEat.length });
+      });
+    });
+    return true; // Keep channel open
   }
 
   // Unknown message type - don't keep channel open
