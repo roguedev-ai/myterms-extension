@@ -592,9 +592,191 @@ class DashboardApp {
         }
 
         this.simulateBtn = document.getElementById('simulateConsentBtn');
-        if (this.simulateBtn) {
-            this.simulateBtn.addEventListener('click', () => this.handleSimulateConsent());
+
+        // ... existing code ...
+
+        class AnalysisController {
+            constructor(dataService) {
+                this.dataService = dataService;
+                this.chart = null;
+                this.currentReport = null;
+                this.init();
+            }
+
+            async init() {
+                console.log('AnalysisController init');
+                this.bindEvents();
+                await this.runScan();
+            }
+
+            bindEvents() {
+                document.getElementById('refresh-btn')?.addEventListener('click', () => this.runScan());
+                document.getElementById('cookie-monster-btn')?.addEventListener('click', () => this.eatCookies());
+            }
+
+            async runScan() {
+                this.updateStatus('Scanning...');
+                try {
+                    // Request analysis from background
+                    const response = await this.dataService.request('ANALYZE_COOKIES');
+                    if (response.success) {
+                        this.currentReport = response.report;
+                        this.renderReport(response.report);
+                        this.updateStatus('Scan Complete');
+                    } else {
+                        this.updateStatus('Scan Failed', true);
+                    }
+                } catch (e) {
+                    console.error(e);
+                    this.updateStatus('Error: ' + e.message, true);
+                }
+            }
+
+            renderReport(report) {
+                // 1. Update Score
+                const scoreEl = document.getElementById('privacy-score');
+                const scoreTextEl = document.getElementById('score-text');
+
+                if (scoreEl) {
+                    scoreEl.textContent = report.privacyScore;
+                    scoreEl.style.color = this.getScoreColor(report.privacyScore);
+                }
+
+                if (scoreTextEl) {
+                    const badCount = report.stats.Analytics + report.stats.Marketing;
+                    if (badCount === 0) {
+                        scoreTextEl.textContent = 'Great! No tracking cookies found.';
+                    } else {
+                        scoreTextEl.textContent = `Found ${badCount} tracking cookies.`;
+                    }
+                }
+
+                // 2. Update Counts
+                document.getElementById('cookie-count').textContent = `${report.stats.total} total`;
+
+                // 3. Render Chart
+                this.renderChart(report.stats);
+
+                // 4. Render Table
+                this.renderTable(report.cookies);
+
+                // 5. Update Monster Button
+                const monsterBtn = document.getElementById('cookie-monster-btn');
+                const badCount = report.stats.Analytics + report.stats.Marketing;
+                if (monsterBtn) {
+                    monsterBtn.disabled = badCount === 0;
+                    monsterBtn.querySelector('span').textContent = badCount > 0 ? '🤤' : '😴';
+                }
+            }
+
+            renderChart(stats) {
+                const ctx = document.getElementById('cookieChart')?.getContext('2d');
+                if (!ctx) return;
+
+                if (this.chart) this.chart.destroy();
+
+                this.chart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Security', 'Functional', 'Analytics', 'Marketing', 'Unknown'],
+                        datasets: [{
+                            data: [
+                                stats.Security,
+                                stats.Functional,
+                                stats.Analytics,
+                                stats.Marketing,
+                                stats.Unknown
+                            ],
+                            backgroundColor: [
+                                '#059669', // Security (Green)
+                                '#2563eb', // Functional (Blue)
+                                '#d97706', // Analytics (Amber)
+                                '#dc2626', // Marketing (Red)
+                                '#4b5563'  // Unknown (Gray)
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: { color: '#d1d5db' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            renderTable(cookies) {
+                const tbody = document.getElementById('cookie-table-body');
+                if (!tbody) return;
+
+                tbody.innerHTML = cookies.map(c => `
+            <tr>
+                <td style="word-break: break-word; color: #fff;">${c.name}</td>
+                <td style="color: #9ca3af;">${c.domain}</td>
+                <td><span class="tag tag-${c.category}">${c.category}</span></td>
+                <td>${c.secure ? '🔒' : ''}</td>
+            </tr>
+        `).join('');
+            }
+
+            getScoreColor(score) {
+                if (score >= 80) return '#4ade80'; // Green
+                if (score >= 50) return '#facc15'; // Yellow
+                return '#ef4444'; // Red
+            }
+
+            async eatCookies() {
+                const btn = document.getElementById('cookie-monster-btn');
+                if (!btn || btn.disabled) return;
+
+                if (!confirm('Are you sure you want to eat (delete) all Analytics and Marketing cookies?')) return;
+
+                btn.disabled = true;
+                this.updateStatus('OM NOM NOM...', false, true); // True for "monster mode"
+
+                try {
+                    const response = await this.dataService.request('COOKIE_MONSTER', {
+                        categories: ['Analytics', 'Marketing']
+                    });
+
+                    if (response.success) {
+                        this.updateStatus(`Burp! Ate ${response.eatenCount} cookies.`);
+                        // Re-scan after delay
+                        setTimeout(() => this.runScan(), 1500);
+                    }
+                } catch (e) {
+                    console.error(e);
+                    this.updateStatus('Indigestion (Error): ' + e.message, true);
+                    btn.disabled = false;
+                }
+            }
+
+            updateStatus(msg, isError = false, isMonster = false) {
+                const el = document.getElementById('monster-status');
+                const scoreText = document.getElementById('score-text');
+
+                if (el) {
+                    el.textContent = msg;
+                    el.style.color = isError ? '#ef4444' : (isMonster ? '#facc15' : '#9ca3af');
+                }
+
+                if (!isMonster && scoreText && !isError) {
+                    // Let renderReport handle score text usually, but valid for errors
+                }
+            }
         }
+
+        // Initialize on load if on analysis page
+        if (window.location.pathname.includes('analysis.html')) {
+            const dataService = new DataService();
+            new AnalysisController(dataService);
+        }
+
 
         // Network Switching
         const networkSelect = document.getElementById('networkSelect');
