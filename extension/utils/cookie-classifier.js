@@ -133,10 +133,5 @@ class CookieClassifier {
     }
 }
 
-// Export for use in Modules or Service Workers
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = CookieClassifier;
-} else {
-    // Global scope for Service Worker importScripts
-    self.CookieClassifier = CookieClassifier;
-}
+// Export for use in Modules
+export default CookieClassifier;
