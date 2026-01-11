@@ -4,6 +4,7 @@
 import { myTermsEthers } from './utils/ethers.js';
 import { consentStorage } from './utils/storage.js';
 import { DualChainManager } from './utils/dual-chain.js';
+import { AGREEMENT_TEMPLATES, MyTermsParser } from './utils/myterms.js';
 
 class ConsentManager {
   constructor() {
@@ -18,6 +19,9 @@ class ConsentManager {
   async init() {
     console.log('ConsentManager initializing...');
 
+    // Seed standard agreements
+    this.seedAgreements();
+
     // Start background processes
     this.startBackgroundProcesses();
 
@@ -25,6 +29,24 @@ class ConsentManager {
     setTimeout(() => {
       this.checkAndProcessBatch();
     }, 5000);
+  }
+
+  async seedAgreements() {
+    console.log('Seeding standard agreements...');
+    try {
+      for (const [key, template] of Object.entries(AGREEMENT_TEMPLATES)) {
+        // Check if exists logic is handled by storeAgreement (deduplication)
+        await consentStorage.storeAgreement({
+          termsHash: key, // Use the ID as hash for standard templates
+          text: JSON.stringify(template, null, 2),
+          url: template['@context'],
+          siteDomain: 'std:p7012',
+        });
+      }
+      console.log('Standard agreements seeded.');
+    } catch (e) {
+      console.error('Failed to seed agreements:', e);
+    }
   }
 
   startBackgroundProcesses() {
@@ -322,7 +344,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     // We used to just call dualChain.registerDualChainConsent, but since we are async
     // inside a non-async listener, we need to handle the promise chain correctly.
     consentManager.dualChain.registerDualChainConsent(preferences, dataController, agreementId)
-      .then(result => sendResponse({ success: true, result }))
+      .then(result => {
+        console.log('Background: Registration successful, sending response:', result);
+        sendResponse({ success: true, result });
+      })
       .catch(error => {
         console.error('Background: Dual-Chain Registration Failed', error);
         sendResponse({ success: false, error: error.message });
