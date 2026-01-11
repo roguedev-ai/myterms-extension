@@ -229,6 +229,17 @@ class DashboardApp {
         console.log('DashboardApp v1.1 initialized');
         this.dataService = new DataService();
         this.consents = []; // Initialize empty array
+
+        // Fail-safe: Force hide overlay if init takes too long (e.g., wallet/provider hanging)
+        this.initTimeout = setTimeout(() => {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay && !overlay.classList.contains('hidden')) {
+                console.warn('DashboardApp initialization timed out (10s). Forcing UI unlock.');
+                overlay.classList.add('hidden');
+                this.showError('Dashboard initialization timed out. Blockchain features may be unavailable.');
+            }
+        }, 10000);
+
         this.init();
     }
 
@@ -268,6 +279,8 @@ class DashboardApp {
             console.error('Dashboard initialization failed:', error);
             this.showError('Failed to initialize dashboard: ' + error.message);
         } finally {
+            if (this.initTimeout) clearTimeout(this.initTimeout);
+
             // Always hide loading overlay
             const overlay = document.getElementById('loadingOverlay');
             if (overlay) {

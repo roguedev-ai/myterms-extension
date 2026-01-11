@@ -326,24 +326,6 @@
     <!-- External Libraries -->
     <script src="../libs/chart.js"></script>
     <script type="module" src="app.js?v=1.1"></script>
-    <script>
-        // Fail-safe: Hide loading overlay if app doesn't initialize within 5 seconds
-        setTimeout(() => {
-            const overlay = document.getElementById('loadingOverlay');
-            if (overlay && !overlay.classList.contains('hidden')) {
-                console.warn('DashboardApp initialization timed out. Hiding overlay.');
-                overlay.classList.add('hidden');
-
-                // Show error toast/modal
-                const modal = document.getElementById('errorModal');
-                const msg = document.getElementById('errorMessage');
-                if (modal && msg) {
-                    msg.innerHTML = 'Dashboard initialization timed out.<br>Please check console for errors.<br><br>Warning: Blockchain features may be unavailable.';
-                    modal.classList.remove('hidden');
-                }
-            }
-        }, 8000);
-    </script>
 </body>
 
 </html>

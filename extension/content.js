@@ -374,6 +374,8 @@ class EnhancedBannerDetector {
       '.fc-primary-button', '.cc-accept-all', '.cmp-accept-all',
       '#onetrust-accept-btn-handler',
       '.iubenda-cs-accept-btn',
+      '#hs-eu-confirmation-button', 'a#hs-eu-confirmation-button',
+      '#hs-eu-cookie-confirmation-button-group > a:first-child',
 
       // Attribute-based
       'button[type="submit"][data-consent="accept"]'
@@ -399,6 +401,7 @@ class EnhancedBannerDetector {
       // Frameworks
       '#onetrust-reject-all-handler',
       '.iubenda-cs-reject-btn',
+      '#hs-eu-decline-button', 'a#hs-eu-decline-button',
       '.fc-secondary-button', // Google Funding Choices usually 'Manage' or 'Do not consent'
       '.cc-deny-all',
       '.osano-cm-denyAll'
