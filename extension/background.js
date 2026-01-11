@@ -390,6 +390,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
+  // GET_ALL_AGREEMENTS - from dashboard
+  if (request.type === 'GET_ALL_AGREEMENTS') {
+    consentStorage.getAllAgreements()
+      .then(agreements => sendResponse({ agreements }))
+      .catch(error => sendResponse({ error: error.message }));
+    return true;
+  }
+
   // GET_COOKIES - from dashboard
   if (request.type === 'GET_COOKIES') {
     const domain = request.domain;

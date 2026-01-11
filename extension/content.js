@@ -542,6 +542,7 @@ class EnhancedBannerDetector {
         siteDomain: window.location.hostname,
         url: window.location.href,
         termsHash: termsHash,
+        bannerContent: bannerElement.textContent || '', // Capture text for agreement storage
         accepted: accepted,
         decisionType: accepted ? 'accept' : 'decline',
         timestamp: Date.now(),

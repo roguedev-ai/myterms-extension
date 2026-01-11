@@ -2,9 +2,10 @@
 // Handles storing consent data locally with daily batch processing
 
 const DB_NAME = 'MyTermsExtensionDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const CONSENT_STORE = 'consentQueue';
 const BATCH_STORE = 'processedBatches';
+const AGREEMENT_STORE = 'agreementText';
 
 class ConsentStorage {
   constructor() {
@@ -41,6 +42,14 @@ class ConsentStorage {
 
           batchStore.createIndex('date', 'processedDate', { unique: false });
           batchStore.createIndex('txHash', 'transactionHash', { unique: false });
+        }
+
+        // Create agreement text store (New in v2)
+        if (!db.objectStoreNames.contains(AGREEMENT_STORE)) {
+          const agreementStore = db.createObjectStore(AGREEMENT_STORE, {
+            keyPath: 'termsHash' // Unique hash is the key
+          });
+          // No autoIncrement, using hash as key
         }
       };
 
@@ -530,6 +539,76 @@ class ConsentStorage {
     } catch (error) {
       console.error('Error exporting data:', error);
       throw error;
+    }
+  }
+
+  // Store full agreement text if not already present
+  async storeAgreement(agreementData) {
+    if (!agreementData.termsHash || !agreementData.text) return;
+
+    try {
+      const db = await this.waitForDB();
+      const transaction = db.transaction([AGREEMENT_STORE], 'readwrite');
+      const store = transaction.objectStore(AGREEMENT_STORE);
+
+      const agreement = {
+        termsHash: agreementData.termsHash,
+        text: agreementData.text,
+        url: agreementData.url,
+        siteDomain: agreementData.siteDomain,
+        firstSeen: Date.now()
+      };
+
+      const request = store.add(agreement);
+
+      return new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve(true);
+        request.onerror = (e) => {
+          if (e.target.error.name === 'ConstraintError') {
+            resolve(false); // Already exists
+          } else {
+            console.error('Error storing agreement:', e.target.error);
+            resolve(false);
+          }
+        };
+      });
+    } catch (err) {
+      console.error('Failed in storeAgreement:', err);
+      return false;
+    }
+  }
+
+  async getAgreement(termsHash) {
+    try {
+      const db = await this.waitForDB();
+      const transaction = db.transaction([AGREEMENT_STORE], 'readonly');
+      const store = transaction.objectStore(AGREEMENT_STORE);
+      const request = store.get(termsHash);
+
+      return new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    } catch (err) {
+      console.error('Failed in getAgreement:', err);
+      return null;
+    }
+  }
+
+  async getAllAgreements() {
+    try {
+      const db = await this.waitForDB();
+      const transaction = db.transaction([AGREEMENT_STORE], 'readonly');
+      const store = transaction.objectStore(AGREEMENT_STORE);
+      const request = store.getAll();
+
+      return new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    } catch (err) {
+      console.error('Failed in getAllAgreements:', err);
+      return [];
     }
   }
 }

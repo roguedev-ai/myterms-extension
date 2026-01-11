@@ -86,6 +86,7 @@
                     <div class="view-controls">
                         <button class="view-btn active" data-view="timeline">📅 Timeline</button>
                         <button class="view-btn" data-view="sites">🌐 Sites</button>
+                        <button class="view-btn" data-view="agreements">📜 Agreements</button>
                         <button class="view-btn" data-view="analytics">📈 Analytics</button>
                         <button class="view-btn" data-view="preferences">⚙️ Preferences</button>
                     </div>
@@ -136,6 +137,20 @@
                 </div>
                 <div class="sites-grid" id="sitesGrid">
                     <!-- Sites will be populated here -->
+                </div>
+            </section>
+
+            <!-- Agreements View -->
+            <section class="agreements-section hidden" id="agreementsView">
+                <h2>Consent Agreements</h2>
+                <div class="agreements-header">
+                    <p class="section-description">
+                        View the full text of terms and conditions you have encountered.
+                    </p>
+                </div>
+                <div class="agreements-list" id="agreementsList">
+                    <!-- Agreements populated via JS -->
+                    <div class="loading-spinner">Loading agreements...</div>
                 </div>
             </section>
 

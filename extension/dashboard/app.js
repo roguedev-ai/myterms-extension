@@ -101,6 +101,20 @@ class DataService {
         }
     }
 
+    async getAllAgreements() {
+        try {
+            const response = await this.request('GET_ALL_AGREEMENTS');
+            if (response.error) throw new Error(response.error);
+            return response.agreements || [];
+        } catch (e) {
+            console.warn('Failed to get agreements via message, falling back', e);
+            if (this.isExtensionContext) {
+                return await consentStorage.getAllAgreements();
+            }
+            return [];
+        }
+    }
+
     async getCookies(domain) {
         if (!domain) return { cookies: [] };
         try {
@@ -500,6 +514,7 @@ class DashboardApp {
         this.views = {
             timeline: document.getElementById('timelineView'),
             sites: document.getElementById('sitesView'),
+            agreements: document.getElementById('agreementsView'),
             analytics: document.getElementById('analyticsView'),
             preferences: document.getElementById('preferencesView')
         };
@@ -1015,6 +1030,17 @@ class DashboardApp {
             if (name === viewName) el.classList.remove('hidden');
             else el.classList.add('hidden');
         });
+
+        if (viewName === 'timeline') {
+            this.loadData();
+        } else if (viewName === 'sites') {
+            this.loadData(); // This updates sites grid too
+        } else if (viewName === 'agreements') {
+            this.loadAgreements();
+        } else if (viewName === 'analytics') {
+            // Stats are updated by loadData
+            this.loadData();
+        }
     }
 
     // ... (loadData and processData methods remain same)
@@ -1318,6 +1344,83 @@ class DashboardApp {
     }
 
 
+
+
+    async loadAgreements() {
+        const agreementsList = document.getElementById('agreementsList');
+        if (!agreementsList) return;
+
+        agreementsList.innerHTML = '<div class="loading-spinner">Loading agreements...</div>';
+
+        try {
+            const agreements = await this.dataService.getAllAgreements();
+            this.renderAgreements(agreements);
+        } catch (error) {
+            console.error('Failed to load agreements:', error);
+            agreementsList.innerHTML = `<div class="error-message">Failed to load agreements: ${error.message}</div>`;
+        }
+    }
+
+    renderAgreements(agreements) {
+        const list = document.getElementById('agreementsList');
+        if (!list) return;
+
+        if (!agreements || agreements.length === 0) {
+            list.innerHTML = '<div class="no-data-message">No agreement texts captured yet.</div>';
+            return;
+        }
+
+        list.innerHTML = '';
+
+        // Sort by firstSeen desc
+        agreements.sort((a, b) => b.firstSeen - a.firstSeen);
+
+        agreements.forEach(agreement => {
+            const dateStr = new Date(agreement.firstSeen).toLocaleDateString();
+            const timeStr = new Date(agreement.firstSeen).toLocaleTimeString();
+
+            const item = document.createElement('div');
+            item.className = 'agreement-card';
+            item.innerHTML = `
+                <div class="agreement-header">
+                    <div class="agreement-title">
+                        <span class="domain">${agreement.siteDomain || 'Unknown'}</span>
+                        <span class="date">${dateStr} ${timeStr}</span>
+                    </div>
+                    <div class="agreement-toggle">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="agreement-content">
+                    <div class="hash-badge" title="SHA-256 Hash of content">
+                        <i class="fas fa-fingerprint"></i> ${agreement.termsHash.substring(0, 10)}...
+                    </div>
+                    <pre class="text-content">${this.escapeHtml(agreement.text)}</pre>
+                </div>
+            `;
+
+            // Toggle logic
+            const header = item.querySelector('.agreement-header');
+            header.addEventListener('click', () => {
+                header.parentElement.classList.toggle('expanded');
+                // Rotate icon
+                const icon = header.querySelector('.agreement-toggle i');
+                if (header.parentElement.classList.contains('expanded')) {
+                    icon.style.transform = 'rotate(180deg)';
+                } else {
+                    icon.style.transform = 'rotate(0deg)';
+                }
+            });
+
+            list.appendChild(item);
+        });
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
 
     renderSites(sitesData) {
         this.sitesGrid.innerHTML = '';
