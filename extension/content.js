@@ -519,30 +519,48 @@ class EnhancedBannerDetector {
   async clickButton(bannerElement, selectors, actionType) {
     for (const selector of selectors) {
       let button = null;
+      let searchContext = bannerElement;
 
-      // Handle :contains pseudo-selector manually
-      if (selector.includes(':contains')) {
-        const parts = selector.match(/([a-z0-9\.\-\#\[\]="]+)?:contains\("(.+)"\)/i);
-        if (parts) {
-          const tag = parts[1] || '*'; // Default to any tag if not specified
-          const text = parts[2];
-          const elements = bannerElement.querySelectorAll(tag); // Scoped to banner
-
-          for (const el of elements) {
-            if (el.textContent.toLowerCase().includes(text.toLowerCase()) && this.isButtonVisible(el)) {
-              button = el;
-              console.log(`[MyTerms] Found button via text "${text}":`, el);
-              break;
+      // Helper to find button
+      const findButton = (context, sel) => {
+        if (sel.includes(':contains')) {
+          const parts = sel.match(/([a-z0-9\.\-\#\[\]="]+)?:contains\("(.+)"\)/i);
+          if (parts) {
+            const tag = parts[1] || '*';
+            const text = parts[2];
+            const elements = context.querySelectorAll(tag);
+            for (const el of elements) {
+              if (el.textContent.toLowerCase().includes(text.toLowerCase()) && this.isButtonVisible(el)) {
+                return el;
+              }
             }
           }
+        } else {
+          const el = context.querySelector(sel);
+          if (el && this.isButtonVisible(el)) return el;
         }
-      } else {
-        // Standard CSS selector
-        const el = bannerElement.querySelector(selector);
-        if (el && this.isButtonVisible(el)) {
-          button = el;
-          console.log(`[MyTerms] Found button via selector "${selector}":`, el);
+        return null;
+      };
+
+      // 1. Try scoped search
+      button = findButton(bannerElement, selector);
+
+      // 2. Try parent search (fallback) - common if we detected the text wrapper sibling
+      if (!button && bannerElement.parentElement) {
+        // Search up to 2 levels up
+        let parent = bannerElement.parentElement;
+        for (let i = 0; i < 2; i++) {
+          if (!parent) break;
+          const fallbackButton = findButton(parent, selector);
+          if (fallbackButton) {
+            console.log(`[MyTerms] Found button via parent fallback selector "${selector}":`, fallbackButton);
+            button = fallbackButton;
+            break;
+          }
+          parent = parent.parentElement;
         }
+      } else if (button) {
+        console.log(`[MyTerms] Found button via selector "${selector}":`, button);
       }
 
       if (button) {
