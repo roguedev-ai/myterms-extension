@@ -1705,7 +1705,201 @@ class DashboardApp {
     }
 }
 
+
+class AnalysisController {
+    constructor(dataService) {
+        this.dataService = dataService;
+        this.chart = null;
+        this.currentReport = null;
+        this.init();
+    }
+
+    async init() {
+        console.log('AnalysisController init');
+        this.bindEvents();
+        // Don't auto-scan on load to save resources, wait for user or view activation?
+        // Let's auto-scan if the analytics view is visible? 
+        // For now, let's just wait for user click or run it once lightly?
+        // User asked "not seeing feature", so let's make sure it's reactive.
+        // We'll bind events and let user click 'Scan'.
+    }
+
+    bindEvents() {
+        document.getElementById('refresh-analysis-btn')?.addEventListener('click', () => this.runScan());
+        document.getElementById('cookie-monster-btn')?.addEventListener('click', () => this.eatCookies());
+    }
+
+    async runScan() {
+        this.updateStatus('Scanning...');
+        try {
+            // Request analysis from background
+            const response = await this.dataService.request('ANALYZE_COOKIES');
+            if (response.success) {
+                this.currentReport = response.report;
+                this.renderReport(response.report);
+                this.updateStatus('Scan Complete');
+            } else {
+                this.updateStatus('Scan Failed', true);
+            }
+        } catch (e) {
+            console.error(e);
+            this.updateStatus('Error: ' + e.message, true);
+        }
+    }
+
+    renderReport(report) {
+        // 1. Update Score
+        const scoreEl = document.getElementById('privacy-score');
+        const scoreTextEl = document.getElementById('score-text');
+
+        if (scoreEl) {
+            scoreEl.textContent = report.privacyScore;
+            scoreEl.style.color = this.getScoreColor(report.privacyScore);
+        }
+
+        if (scoreTextEl) {
+            const badCount = report.stats.Analytics + report.stats.Marketing;
+            if (badCount === 0) {
+                scoreTextEl.textContent = 'Great! No tracking cookies found.';
+            } else {
+                scoreTextEl.textContent = `Found ${badCount} tracking cookies.`;
+            }
+        }
+
+        // 2. Update Counts
+        const countEl = document.getElementById('cookie-count');
+        if (countEl) countEl.textContent = `${report.stats.total} total`;
+
+        // 3. Render Chart
+        this.renderChart(report.stats);
+
+        // 4. Render Table
+        this.renderTable(report.cookies);
+
+        // 5. Update Monster Button
+        const monsterBtn = document.getElementById('cookie-monster-btn');
+        const badCount = report.stats.Analytics + report.stats.Marketing;
+        if (monsterBtn) {
+            monsterBtn.disabled = badCount === 0;
+            const span = monsterBtn.querySelector('span');
+            if (span) span.textContent = badCount > 0 ? '🤤' : '😴';
+            monsterBtn.style.opacity = badCount > 0 ? '1' : '0.5';
+        }
+    }
+
+    renderChart(stats) {
+        const ctx = document.getElementById('cookieChart')?.getContext('2d');
+        if (!ctx) return;
+
+        if (this.chart) this.chart.destroy();
+
+        this.chart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Security', 'Functional', 'Analytics', 'Marketing', 'Unknown'],
+                datasets: [{
+                    data: [
+                        stats.Security,
+                        stats.Functional,
+                        stats.Analytics,
+                        stats.Marketing,
+                        stats.Unknown
+                    ],
+                    backgroundColor: [
+                        '#059669', // Security (Green)
+                        '#2563eb', // Functional (Blue)
+                        '#d97706', // Analytics (Amber)
+                        '#dc2626', // Marketing (Red)
+                        '#4b5563'  // Unknown (Gray)
+                    ],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { color: '#d1d5db' }
+                    }
+                }
+            }
+        });
+    }
+
+    renderTable(cookies) {
+        const tbody = document.getElementById('cookie-table-body');
+        if (!tbody) return;
+
+        const categoryColors = {
+            'Security': '#059669',
+            'Analytics': '#d97706',
+            'Marketing': '#dc2626',
+            'Functional': '#2563eb',
+            'Unknown': '#4b5563'
+        };
+
+        tbody.innerHTML = cookies.map(c => `
+            <tr style="border-bottom: 1px solid #374151;">
+                <td style="padding: 10px 15px; word-break: break-all; color: #e5e7eb;">${c.name}</td>
+                <td style="padding: 10px 15px; color: #9ca3af;">${c.domain}</td>
+                <td style="padding: 10px 15px;">
+                     <span style="background: ${categoryColors[c.category] || '#4b5563'}; color: white; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem;">
+                        ${c.category}
+                    </span>
+                </td>
+                <td style="padding: 10px 15px; text-align: center;">${c.secure ? '🔒' : ''}</td>
+            </tr>
+        `).join('');
+    }
+
+    getScoreColor(score) {
+        if (score >= 80) return '#4ade80'; // Green
+        if (score >= 50) return '#facc15'; // Yellow
+        // For the purple card background, white is better than red text, but let's stick to logic
+        return 'white';
+    }
+
+    async eatCookies() {
+        const btn = document.getElementById('cookie-monster-btn');
+        if (!btn || btn.disabled) return;
+
+        if (!confirm('Me want cookie! (Are you sure you want to delete all Analytics/Marketing cookies?)')) return;
+
+        btn.disabled = true;
+        this.updateStatus('OM NOM NOM...', false, true);
+
+        try {
+            const response = await this.dataService.request('COOKIE_MONSTER', {
+                categories: ['Analytics', 'Marketing']
+            });
+
+            if (response.success) {
+                this.updateStatus(`Burp! Ate ${response.eatenCount} cookies.`);
+                setTimeout(() => this.runScan(), 1500);
+            }
+        } catch (e) {
+            console.error(e);
+            this.updateStatus('Indigestion (Error): ' + e.message, true);
+            btn.disabled = false;
+        }
+    }
+
+    updateStatus(msg, isError = false, isMonster = false) {
+        const el = document.getElementById('monster-status');
+        if (el) {
+            el.textContent = msg;
+            el.style.color = isError ? '#ef4444' : (isMonster ? '#facc15' : '#9ca3af');
+        }
+    }
+}
+
 // Initialize
 window.addEventListener('DOMContentLoaded', () => {
     new DashboardApp();
+
+    // Initialize Cookie Monster
+    const analysisService = new DataService();
+    window.analysisController = new AnalysisController(analysisService);
 });
