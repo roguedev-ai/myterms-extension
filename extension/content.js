@@ -340,15 +340,22 @@ class EnhancedBannerDetector {
   }
 
   shouldAcceptBasedOnProfile() {
-    // Privacy-first logic: only accept if no tracking cookies are involved
+    // Privacy-first logic: determine if we should strictly "Accept All" or try to "Reject/Config"
     const prefs = this.myTermsProfile?.preferences || {};
 
-    // If "Deny by Default" is enabled, always return false (decline)
+    // 1. If "Deny All" is explicitly set, always DECLINE.
     if (prefs.denyAll) {
       return false;
     }
 
-    return prefs.marketing === false && prefs.analytics === false && prefs.functional !== false;
+    // 2. If user wants to BLOCK Analytics or Marketing, we cannot "Accept All".
+    // We must return FALSE to trigger the "Decline" path (which includes Manage/Reject).
+    if (prefs.analytics === false || prefs.marketing === false) {
+      return false;
+    }
+
+    // 3. Only if user allows everything (or doesn't care), return TRUE (Accept All).
+    return true;
   }
 
   async clickAccept(bannerElement) {
@@ -359,11 +366,14 @@ class EnhancedBannerDetector {
       // Common selectors
       '[data-testid*="accept"]', '[aria-label*="accept"]', 'button[data-action="accept"]',
       '.accept-all', '#accept-all', '.accept-all-cookies', '#accept-cookies',
-      'button:contains("Accept")', 'button:contains("Agree")', 'button:contains("Ok")',
+      'button:contains("Accept")', 'button:contains("Agree")', 'button:contains("Ok")', 'button:contains("Allow all")',
       '[data-cy*="accept"]', '.cookie-accept', '.accept-cookies',
+      'button:contains("I Accept")', 'button:contains("Got it")',
 
       // Framework specific
       '.fc-primary-button', '.cc-accept-all', '.cmp-accept-all',
+      '#onetrust-accept-btn-handler',
+      '.iubenda-cs-accept-btn',
 
       // Attribute-based
       'button[type="submit"][data-consent="accept"]'
@@ -373,40 +383,75 @@ class EnhancedBannerDetector {
   }
 
   async clickDecline(bannerElement) {
-    const declineSelectors = [
-      // User-defined patterns
+    // Priority 1: Explicit Reject/Decline "All"
+    const strictRejectSelectors = [
+      // User-defined
       ...this.myTermsProfile?.rules?.declinePattern?.split(',').map(s => s.trim()).filter(Boolean) || [],
 
-      // Common selectors
-      '[data-testid*="decline"]', '[aria-label*="decline"]', 'button[data-action="decline"]',
-      '.decline', '#decline-cookies', '.decline-all', '.reject-all',
-      'button:contains("Decline")', 'button:contains("Reject")', 'button:contains("Deny")',
-      '[data-cy*="decline"]', '.cookie-decline', '.reject-cookies',
+      // Common strict reject
+      '[data-testid*="decline"]', '[data-testid*="reject"]',
+      'button[data-action="decline"]', 'button[data-action="reject"]',
+      '.decline-all', '.reject-all', '#reject-all', '#decline-all',
+      'button:contains("Reject All")', 'button:contains("Decline All")',
+      'button:contains("Refuse")', 'button:contains("Disagree")',
+      '.cookie-decline', '.reject-cookies',
 
-      // "Manage" or "Configure" often leads to decline options or is the only alternative to Accept
+      // Frameworks
+      '#onetrust-reject-all-handler',
+      '.iubenda-cs-reject-btn',
+      '.fc-secondary-button', // Google Funding Choices usually 'Manage' or 'Do not consent'
+      '.cc-deny-all',
+      '.osano-cm-denyAll'
+    ];
+
+    // Priority 2: "Manage" / "Configure" / "Necessary Only"
+    // These often don't close the banner immediately but open a drawer. 
+    // We click them, then try to find a "Save" button.
+    const secondarySelectors = [
+      'button:contains("Use necessary cookies only")', 'button:contains("Necessary only")',
+      'button:contains("Only necessary")',
+      '[aria-label*="necessary only"]',
+
       'button:contains("Manage")', 'button:contains("Configure")', 'button:contains("Settings")',
       'button:contains("Preferences")', '.cookie-settings', '.manage-cookies',
       '[aria-label*="manage"]', '[aria-label*="settings"]',
-
-      // "Continue without accepting" patterns (often links or small buttons)
-      'button:contains("Continue without accepting")', 'a:contains("Continue without accepting")',
-      'button:contains("Continue without agreeing")', 'a:contains("Continue without agreeing")',
-      'button:contains("Use necessary cookies only")', 'a:contains("Use necessary cookies only")',
-      'button:contains("Necessary only")', 'a:contains("Necessary only")',
-      'button:contains("Only necessary")', 'a:contains("Only necessary")',
-      'button:contains("Reject all")', 'a:contains("Reject all")',
-      '[aria-label*="continue without"]', '[aria-label*="necessary only"]',
-
-      // Close buttons that might act as "ignore/decline"
-      'button[aria-label="Close"]', '.close-banner', '.dismiss-banner',
-
-      // Framework specific
-      '.fc-secondary-button', '.cc-deny-all', '.cmp-reject-all',
-      '.osano-cm-denyAll', '#onetrust-reject-all-handler',
-      '.osano-cm-save-preferences', // Sometimes save prefs is the way to "reject" non-essential
+      '.fc-settings-button',
+      '.osano-cm-manage'
     ];
 
-    return await this.clickButton(bannerElement, declineSelectors, 'decline');
+    // Try strict reject first
+    let success = await this.clickButton(bannerElement, strictRejectSelectors, 'decline');
+
+    if (!success) {
+      console.log('No strict reject found, trying Manage/Necessary options...');
+      // Try secondary options (Manage/Necessary)
+      success = await this.clickButton(bannerElement, secondarySelectors, 'manage');
+
+      if (success) {
+        // If we clicked "Manage", we might need to click "Save" or "Confirm" after
+        // Wait for drawer/modal
+        await new Promise(r => setTimeout(r, 800));
+        await this.clickSavePreferences(bannerElement);
+        return true;
+      }
+    }
+
+    return success;
+  }
+
+  async clickSavePreferences(bannerElement) {
+    const saveSelectors = [
+      '.save-preferences', '#save-preferences',
+      'button:contains("Save")', 'button:contains("Confirm")',
+      'button:contains("Save Choices")', 'button:contains("Save Selection")',
+      'button:contains("Confirm My Choices")',
+      '.fc-confirm-choices',
+      '.osano-cm-save-preferences',
+      '.iubenda-cs-save-btn' // Iubenda specific
+    ];
+
+    console.log('Attempting to save preferences...');
+    return await this.clickButton(bannerElement, saveSelectors, 'save');
   }
 
   async clickButton(bannerElement, selectors, actionType) {
