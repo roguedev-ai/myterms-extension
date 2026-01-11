@@ -523,7 +523,22 @@ class EnhancedBannerDetector {
           setTimeout(() => button.style.border = originalBorder, 500);
 
           console.log(`[MyTerms] Clicking ${actionType} button:`, button);
-          button.click();
+
+          // Dispatch full event sequence to satisfy strict frameworks (React, etc.)
+          const events = ['mousedown', 'mouseup', 'click'];
+          events.forEach(eventType => {
+            const event = new MouseEvent(eventType, {
+              bubbles: true,
+              cancelable: true,
+              view: window
+            });
+            button.dispatchEvent(event);
+          });
+
+          // Also try standard click() as fallback
+          if (typeof button.click === 'function') {
+            button.click();
+          }
 
           // Confirm the banner is handled
           await new Promise(resolve => setTimeout(resolve, 500));
