@@ -304,11 +304,20 @@ class EnhancedBannerDetector {
   handleBanner(bannerElement) {
     console.log('Processing banner:', bannerElement);
 
-    // Wait for the banner to fully render
+    // Wait for the banner to fully render/animate
     setTimeout(async () => {
       try {
         if (this.myTermsProfile?.autoHandle) {
           await this.applyMyTermsPreferences(bannerElement);
+
+          // Retry once if failed (some banners animate slowly)
+          setTimeout(async () => {
+            const stillVisible = this.isElementVisible(bannerElement);
+            if (stillVisible) {
+              console.log('Banner still visible, retrying preferences...');
+              await this.applyMyTermsPreferences(bannerElement);
+            }
+          }, 2000);
         }
 
         // Always record the consent/choice
@@ -316,7 +325,7 @@ class EnhancedBannerDetector {
       } catch (error) {
         console.error('Error handling banner:', error);
       }
-    }, 1000);
+    }, 2000); // Increased from 1000ms to 2000ms
   }
 
   async applyMyTermsPreferences(bannerElement) {
@@ -527,11 +536,14 @@ class EnhancedBannerDetector {
     const style = window.getComputedStyle(button);
     const rect = button.getBoundingClientRect();
 
-    return style.display !== 'none' &&
-      style.visibility !== 'hidden' &&
-      style.opacity !== '0' &&
-      rect.width > 0 &&
-      rect.height > 0;
+    // Relaxed visibility check
+    const isVisibleStyle = style.display !== 'none' && style.visibility !== 'hidden';
+    const isVisibleSize = rect.width > 0 && rect.height > 0;
+
+    // Some buttons start with opacity 0 and fade in
+    const isVisibleOpacity = style.opacity !== '0';
+
+    return isVisibleStyle && isVisibleSize;
   }
 
   isElementVisible(element) {
