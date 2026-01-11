@@ -195,6 +195,9 @@ class EnhancedBannerDetector {
 
   isCookieBanner(element) {
     try {
+      // Prevent re-scanning
+      if (element.hasAttribute('data-myterms-scanned')) return false;
+
       // Get element properties
       const textContent = element.textContent?.toLowerCase() || '';
       const className = (typeof element.className === 'string' ? element.className : element.className?.baseVal || '').toLowerCase();
@@ -219,10 +222,10 @@ class EnhancedBannerDetector {
 
       // ID/class selectors (medium weight)
       // Check for 'modal' or 'popup' significantly increasing chance it's a banner
-      const selectorKeywords = ['cookie', 'consent', 'gdpr', 'privacy', 'banner', 'modal', 'popup', 'notify', 'agreement'];
+      const selectorKeywords = ['cookie', 'consent', 'gdpr', 'privacy', 'banner', 'modal', 'popup', 'notify', 'agreement', 'policy', 'notice'];
       selectorKeywords.forEach(keyword => {
         if (className.includes(keyword) || id.includes(keyword)) {
-          score += 2;
+          score += 3; // Increased from 2 to catch "privacy-wrapper" (Score 5 -> 6)
         }
       });
 
@@ -252,7 +255,8 @@ class EnhancedBannerDetector {
       if (score < 5) {
         // Strict size check for low confidence items to avoid false positives
         if (rect.width < 100 || rect.height < 20) { // Relaxed from 200/50
-          // console.debug('Rejected low score small element', element);
+          // Mark as scanned to prevent re-check
+          element.setAttribute('data-myterms-scanned', 'true');
           return false;
         }
       }
@@ -261,9 +265,13 @@ class EnhancedBannerDetector {
       const isBanner = score >= 6;
 
       // LOG REJECTION for debugging if it looked promising
+      // Only log once per element
       if (!isBanner && score >= 4) {
         console.log(`[MyTerms-Debug] Candidate rejected (Score ${score} < 6):`, element);
       }
+
+      // Mark as scanned
+      element.setAttribute('data-myterms-scanned', 'true');
 
       if (isBanner) {
         console.log(`[MyTerms] Banner detected! Score: ${score}`, element);
