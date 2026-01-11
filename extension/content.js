@@ -197,14 +197,12 @@ class EnhancedBannerDetector {
     try {
       // Get element properties
       const textContent = element.textContent?.toLowerCase() || '';
-      // Handle both regular elements (string) and SVG elements (SVGAnimatedString)
       const className = (typeof element.className === 'string' ? element.className : element.className?.baseVal || '').toLowerCase();
       const id = element.id?.toLowerCase() || '';
       const tagName = element.tagName?.toLowerCase() || '';
 
-      // Skip elements that are too small or too large
+      // Dimensions check
       const rect = element.getBoundingClientRect();
-      if (rect.width < 200 || rect.height < 50 || rect.width > window.innerWidth) return false;
 
       // Heuristic scoring system
       let score = 0;
@@ -220,26 +218,23 @@ class EnhancedBannerDetector {
       score += contentMatches.length * 3;
 
       // ID/class selectors (medium weight)
-      const selectorKeywords = ['cookie', 'consent', 'gdpr', 'privacy', 'banner', 'modal', 'popup'];
+      // Check for 'modal' or 'popup' significantly increasing chance it's a banner
+      const selectorKeywords = ['cookie', 'consent', 'gdpr', 'privacy', 'banner', 'modal', 'popup', 'notify', 'agreement'];
       selectorKeywords.forEach(keyword => {
         if (className.includes(keyword) || id.includes(keyword)) {
           score += 2;
         }
       });
 
-      // Specific patterns and positions (high weight)
+      // Specific patterns and positions
       if (tagName === 'dialog' || tagName === 'aside') score += 5;
       if (element.hasAttribute('role') && element.getAttribute('role') === 'dialog') score += 4;
+      if (element.getAttribute('aria-label')?.toLowerCase().includes('cookie')) score += 5;
 
-      // Safe computed style check
-      try {
-        if (window.getComputedStyle(element).position === 'fixed') score += 2;
-      } catch (e) {
-        // Ignore computed style errors
-      }
+      // Child elements with specific patterns (buttons)
+      const buttons = element.querySelectorAll('button, [role="button"], input[type="button"], input[type="submit"], a.btn, a[class*="button"]');
+      if (buttons.length > 0) score += 2; // Having buttons is a good sign
 
-      // Child elements with specific patterns
-      const buttons = element.querySelectorAll('button, [role="button"], input[type="button"], input[type="submit"]');
       buttons.forEach(button => {
         const btnText = button.textContent?.toLowerCase() || '';
         if (contentKeywords.some(keyword => btnText.includes(keyword))) {
@@ -250,15 +245,32 @@ class EnhancedBannerDetector {
       // Attribute-based detection
       if (element.hasAttribute('data-cookie') || element.hasAttribute('data-consent')) score += 5;
 
-      // Require minimum score (lowered to catch more banners)
+      // --- DECISION LOGIC ---
+
+      // 1. Filter out obvious non-banners logic
+      // Only apply strict size checks if the score is low. High score (text match) might mean valid banner that simply has strange dimensions (or is hidden)
+      if (score < 5) {
+        // Strict size check for low confidence items to avoid false positives
+        if (rect.width < 100 || rect.height < 20) { // Relaxed from 200/50
+          // console.debug('Rejected low score small element', element);
+          return false;
+        }
+      }
+
+      // 2. Threshold check
       const isBanner = score >= 6;
-      if (isBanner && score > 3) {
-        console.log(`Banner score: ${score} for element:`, element);
+
+      // LOG REJECTION for debugging if it looked promising
+      if (!isBanner && score >= 4) {
+        console.log(`[MyTerms-Debug] Candidate rejected (Score ${score} < 6):`, element);
+      }
+
+      if (isBanner) {
+        console.log(`[MyTerms] Banner detected! Score: ${score}`, element);
       }
 
       return isBanner;
     } catch (error) {
-      // Silently fail for this element if DOM access causes issues (e.g. CORS fonts)
       return false;
     }
   }
