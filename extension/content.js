@@ -13,7 +13,7 @@ class EnhancedBannerDetector {
   }
 
   async init() {
-    console.log('Enhanced Banner Detector initializing...');
+    console.log('Enhanced Banner Detector v1.3 initializing... (Debug Mode)');
 
     // Load user's MyTerms profile
     await this.loadMyTermsProfile();
