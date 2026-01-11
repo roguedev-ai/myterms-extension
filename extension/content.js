@@ -429,7 +429,17 @@ class EnhancedBannerDetector {
       // User-defined
       ...this.myTermsProfile?.rules?.declinePattern?.split(',').map(s => s.trim()).filter(Boolean) || [],
 
-      // Common strict reject
+      // Selectors for "Decline" or "Reject"
+      'button[id*="decline"]', 'button[id*="reject"]', 'button[id*="deny"]', 'button[class*="decline"]', 'button[class*="reject"]',
+      'button[name*="decline"]', 'button[name*="reject"]', 'button[aria-label*="decline"]', 'button[aria-label*="reject"]',
+      'a[id*="decline"]', 'a[id*="reject"]', 'a[class*="decline"]', 'a[class*="reject"]', 'a[aria-label*="decline"]',
+      '[data-action="decline"]', '[data-action="reject"]',
+      'button:contains("Decline")', 'button:contains("Reject")', 'button:contains("Deny")', 'button:contains("No thanks")', 'button:contains("Disagree")',
+      'a:contains("Decline")', 'a:contains("Reject")', 'a:contains("Deny")', 'a:contains("No thanks")',
+      '.cookie-setting-link:contains("Do Not Share")', // Specific support for OneTrust
+      'button.onetrust-close-btn-handler', // OneTrust close button as fallback for "Reject" sometimes
+
+      // Common strict reject (kept for now, but many are covered by new specific ones)
       '[data-testid*="decline"]', '[data-testid*="reject"]',
       'button[data-action="decline"]', 'button[data-action="reject"]',
       '.decline-all', '.reject-all', '#reject-all', '#decline-all',
