@@ -3,12 +3,14 @@
 
 import { myTermsEthers } from './utils/ethers.js';
 import { consentStorage } from './utils/storage.js';
+import { DualChainManager } from './utils/dual-chain.js';
 
 class ConsentManager {
   constructor() {
     this.lastBatchTime = null;
     this.batchInterval = 24 * 60 * 60 * 1000; // 24 hours
     this.processing = false;
+    this.dualChain = new DualChainManager();
 
     this.init();
   }
@@ -310,6 +312,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .then(sites => sendResponse({ sites }))
       .catch(error => sendResponse({ error: error.message }));
     return true;
+  }
+
+  // REGISTER_DUAL_CHAIN_CONSENT
+  if (request.type === 'REGISTER_DUAL_CHAIN_CONSENT') {
+    const { preferences, dataController, agreementId } = request.payload;
+    console.log('Background: Processing Dual-Chain Registration...');
+
+    // We used to just call dualChain.registerDualChainConsent, but since we are async
+    // inside a non-async listener, we need to handle the promise chain correctly.
+    consentManager.dualChain.registerDualChainConsent(preferences, dataController, agreementId)
+      .then(result => sendResponse({ success: true, result }))
+      .catch(error => {
+        console.error('Background: Dual-Chain Registration Failed', error);
+        sendResponse({ success: false, error: error.message });
+      });
+
+    return true; // Keep channel open
   }
 
   // GET_POPUP_DATA - from popup
