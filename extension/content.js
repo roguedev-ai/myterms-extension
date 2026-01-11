@@ -532,9 +532,9 @@ class EnhancedBannerDetector {
           if (!this.isElementVisible(bannerElement)) {
             return true;
           }
+        } catch (error) {
+          console.debug(`Failed to click ${actionType} with selector ${selector}:`, error.message);
         }
-      } catch (error) {
-        console.debug(`Failed to click ${actionType} with selector ${selector}:`, error.message);
       }
     }
 
