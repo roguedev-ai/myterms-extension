@@ -331,16 +331,23 @@ class EnhancedBannerDetector {
   async applyMyTermsPreferences(bannerElement) {
     try {
       const shouldAccept = this.shouldAcceptBasedOnProfile();
+      console.log(`[MyTerms] Profile decision: ${shouldAccept ? 'ACCEPT' : 'DECLINE'} based on preferences:`, this.myTermsProfile?.preferences);
 
       if (shouldAccept) {
+        console.log('[MyTerms] Attempting to click ACCEPT button...');
         const accepted = await this.clickAccept(bannerElement);
         if (accepted) {
           await this.recordConsent(bannerElement, true);
+        } else {
+          console.log('[MyTerms] Failed to find/click ACCEPT button.');
         }
       } else {
+        console.log('[MyTerms] Attempting to click DECLINE button...');
         const declined = await this.clickDecline(bannerElement);
         if (declined) {
           await this.recordConsent(bannerElement, false);
+        } else {
+          console.log('[MyTerms] Failed to find/click DECLINE button.');
         }
       }
     } catch (error) {
@@ -379,12 +386,15 @@ class EnhancedBannerDetector {
       '[data-cy*="accept"]', '.cookie-accept', '.accept-cookies',
       'button:contains("I Accept")', 'button:contains("Got it")',
 
+      // Generic Links
+      'a:contains("Accept")', 'a:contains("Agree")', 'a:contains("Allow all")',
+
       // Framework specific
       '.fc-primary-button', '.cc-accept-all', '.cmp-accept-all',
       '#onetrust-accept-btn-handler',
       '.iubenda-cs-accept-btn',
       '#hs-eu-confirmation-button', 'a#hs-eu-confirmation-button',
-      '#hs-eu-cookie-confirmation-button-group > a:first-child',
+      '#hs-eu-cookie-confirmation-buttons-area > a:first-child', // HubSpot generic child
 
       // Attribute-based
       'button[type="submit"][data-consent="accept"]'
@@ -407,10 +417,15 @@ class EnhancedBannerDetector {
       'button:contains("Refuse")', 'button:contains("Disagree")',
       '.cookie-decline', '.reject-cookies',
 
+      // Generic Links as buttons
+      'a:contains("Reject All")', 'a:contains("Decline")', 'a:contains("Deny")',
+
       // Frameworks
       '#onetrust-reject-all-handler',
       '.iubenda-cs-reject-btn',
       '#hs-eu-decline-button', 'a#hs-eu-decline-button',
+      '#hs-eu-cookie-confirmation-buttons-area > a:last-child', // HubSpot generic child
+
       '.fc-secondary-button', // Google Funding Choices usually 'Manage' or 'Do not consent'
       '.cc-deny-all',
       '.osano-cm-denyAll'
@@ -427,6 +442,11 @@ class EnhancedBannerDetector {
       'button:contains("Manage")', 'button:contains("Configure")', 'button:contains("Settings")',
       'button:contains("Preferences")', '.cookie-settings', '.manage-cookies',
       '[aria-label*="manage"]', '[aria-label*="settings"]',
+
+      // Link versions
+      'a:contains("Manage")', 'a:contains("Preferences")', 'a:contains("Settings")',
+      'a:contains("Necessary only")',
+
       '.fc-settings-button',
       '.osano-cm-manage'
     ];
@@ -435,7 +455,7 @@ class EnhancedBannerDetector {
     let success = await this.clickButton(bannerElement, strictRejectSelectors, 'decline');
 
     if (!success) {
-      console.log('No strict reject found, trying Manage/Necessary options...');
+      console.log('[MyTerms] No strict reject found, trying Manage/Necessary options...');
       // Try secondary options (Manage/Necessary)
       success = await this.clickButton(bannerElement, secondarySelectors, 'manage');
 
@@ -468,23 +488,42 @@ class EnhancedBannerDetector {
 
   async clickButton(bannerElement, selectors, actionType) {
     for (const selector of selectors) {
-      try {
-        let button;
+      let button = null;
 
-        // Try within the banner element first
-        button = bannerElement.querySelector(selector);
-        if (!button) {
-          // Try globally but make sure it's related to the banner
-          button = document.querySelector(selector);
+      // Handle :contains pseudo-selector manually
+      if (selector.includes(':contains')) {
+        const parts = selector.match(/([a-z0-9\.\-\#\[\]="]+)?:contains\("(.+)"\)/i);
+        if (parts) {
+          const tag = parts[1] || '*'; // Default to any tag if not specified
+          const text = parts[2];
+          const elements = bannerElement.querySelectorAll(tag); // Scoped to banner
+
+          for (const el of elements) {
+            if (el.textContent.toLowerCase().includes(text.toLowerCase()) && this.isButtonVisible(el)) {
+              button = el;
+              console.log(`[MyTerms] Found button via text "${text}":`, el);
+              break;
+            }
+          }
         }
+      } else {
+        // Standard CSS selector
+        const el = bannerElement.querySelector(selector);
+        if (el && this.isButtonVisible(el)) {
+          button = el;
+          console.log(`[MyTerms] Found button via selector "${selector}":`, el);
+        }
+      }
 
-        if (button && this.isButtonVisible(button)) {
-          // Simulate hover to ensure button is interactive
-          button.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-          await new Promise(resolve => setTimeout(resolve, 100));
+      if (button) {
+        try {
+          // Highlight for visual debugging (temporal)
+          const originalBorder = button.style.border;
+          button.style.border = '2px solid red';
+          setTimeout(() => button.style.border = originalBorder, 500);
 
+          console.log(`[MyTerms] Clicking ${actionType} button:`, button);
           button.click();
-          console.log(`Clicked ${actionType} button:`, selector);
 
           // Confirm the banner is handled
           await new Promise(resolve => setTimeout(resolve, 500));
@@ -494,173 +533,170 @@ class EnhancedBannerDetector {
             return true;
           }
         }
-      } catch (error) {
-        console.debug(`Failed to click ${actionType} with selector ${selector}:`, error.message);
-      }
     }
 
-    console.log(`No ${actionType} button found`);
-    return false;
-  }
+      console.log(`No ${actionType} button found`);
+      return false;
+    }
 
-  // Add a global click listener to catch manual user interactions
-  setupManualClickListener() {
-    document.addEventListener('click', (event) => {
-      const target = event.target;
+    // Add a global click listener to catch manual user interactions
+    setupManualClickListener() {
+      document.addEventListener('click', (event) => {
+        const target = event.target;
 
-      // Check if the click was on a button-like element
-      if (target.matches('button, a, input[type="button"], input[type="submit"], [role="button"]')) {
-        const text = target.textContent?.toLowerCase() || '';
-        const ariaLabel = target.getAttribute('aria-label')?.toLowerCase() || '';
+        // Check if the click was on a button-like element
+        if (target.matches('button, a, input[type="button"], input[type="submit"], [role="button"]')) {
+          const text = target.textContent?.toLowerCase() || '';
+          const ariaLabel = target.getAttribute('aria-label')?.toLowerCase() || '';
 
-        // Check if it looks like an accept/decline action
-        if (text.includes('accept') || text.includes('agree') || ariaLabel.includes('accept')) {
-          console.log('Manual accept click detected');
-          // We can't be 100% sure it's a cookie banner, but we can check context
-          // For now, we'll just log it. In a real implementation, we'd check if it's inside a banner.
-          // To be safe, we only record if we've already detected a banner on this page
-          if (this.bannersFound.length > 0) {
-            this.recordConsent(target, true);
-          }
-        } else if (text.includes('decline') || text.includes('reject') || ariaLabel.includes('decline')) {
-          console.log('Manual decline click detected');
-          if (this.bannersFound.length > 0) {
-            this.recordConsent(target, false);
+          // Check if it looks like an accept/decline action
+          if (text.includes('accept') || text.includes('agree') || ariaLabel.includes('accept')) {
+            console.log('Manual accept click detected');
+            // We can't be 100% sure it's a cookie banner, but we can check context
+            // For now, we'll just log it. In a real implementation, we'd check if it's inside a banner.
+            // To be safe, we only record if we've already detected a banner on this page
+            if (this.bannersFound.length > 0) {
+              this.recordConsent(target, true);
+            }
+          } else if (text.includes('decline') || text.includes('reject') || ariaLabel.includes('decline')) {
+            console.log('Manual decline click detected');
+            if (this.bannersFound.length > 0) {
+              this.recordConsent(target, false);
+            }
           }
         }
-      }
-    }, true); // Capture phase
-  }
+      }, true); // Capture phase
+    }
 
-  isButtonVisible(button) {
-    const style = window.getComputedStyle(button);
-    const rect = button.getBoundingClientRect();
+    isButtonVisible(button) {
+      const style = window.getComputedStyle(button);
+      const rect = button.getBoundingClientRect();
 
-    // Relaxed visibility check
-    const isVisibleStyle = style.display !== 'none' && style.visibility !== 'hidden';
-    const isVisibleSize = rect.width > 0 && rect.height > 0;
+      // Relaxed visibility check
+      const isVisibleStyle = style.display !== 'none' && style.visibility !== 'hidden';
+      const isVisibleSize = rect.width > 0 && rect.height > 0;
 
-    // Some buttons start with opacity 0 and fade in
-    const isVisibleOpacity = style.opacity !== '0';
+      // Some buttons start with opacity 0 and fade in
+      const isVisibleOpacity = style.opacity !== '0';
 
-    return isVisibleStyle && isVisibleSize;
-  }
+      return isVisibleStyle && isVisibleSize;
+    }
 
-  isElementVisible(element) {
-    const style = window.getComputedStyle(element);
-    const rect = element.getBoundingClientRect();
+    isElementVisible(element) {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
 
-    return style.display !== 'none' &&
-      style.visibility !== 'hidden' &&
-      style.opacity !== '0' &&
-      rect.width > 20 &&
-      rect.height > 20;
-  }
+      return style.display !== 'none' &&
+        style.visibility !== 'hidden' &&
+        style.opacity !== '0' &&
+        rect.width > 20 &&
+        rect.height > 20;
+    }
 
   async recordBannerContent(bannerElement) {
-    try {
-      // Generate hash of the banner content
-      const termsHash = await this.generateTermsHash({
-        text: bannerElement.textContent || ''
-        // Removed innerHTML capture to prevent XSS risks and reduce data size
-      });
+      try {
+        // Generate hash of the banner content
+        const termsHash = await this.generateTermsHash({
+          text: bannerElement.textContent || ''
+          // Removed innerHTML capture to prevent XSS risks and reduce data size
+        });
 
-      const bannerData = {
-        siteDomain: window.location.hostname,
-        url: window.location.href,
-        termsHash: termsHash,
-        bannerContent: this.myTermsProfile?.hashOriginalContent ? null : bannerElement.textContent,
-        timestamp: Date.now(),
-        userAgent: navigator.userAgent,
-        preferences: this.myTermsProfile?.preferences,
-        viewport: {
-          width: window.innerWidth,
-          height: window.innerHeight
-        }
-      };
+        const bannerData = {
+          siteDomain: window.location.hostname,
+          url: window.location.href,
+          termsHash: termsHash,
+          bannerContent: this.myTermsProfile?.hashOriginalContent ? null : bannerElement.textContent,
+          timestamp: Date.now(),
+          userAgent: navigator.userAgent,
+          preferences: this.myTermsProfile?.preferences,
+          viewport: {
+            width: window.innerWidth,
+            height: window.innerHeight
+          }
+        };
 
-      // Send to background script for queuing
-      chrome.runtime.sendMessage({
-        type: 'CONSENT_CAPTURED',
-        consent: bannerData
-      });
+        // Send to background script for queuing
+        chrome.runtime.sendMessage({
+          type: 'CONSENT_CAPTURED',
+          consent: bannerData
+        });
 
-      console.log('Banner content recorded for:', window.location.hostname);
-    } catch (error) {
-      console.error('Failed to record banner content:', error);
+        console.log('Banner content recorded for:', window.location.hostname);
+      } catch (error) {
+        console.error('Failed to record banner content:', error);
+      }
     }
-  }
 
   async recordConsent(bannerElement, accepted) {
-    try {
-      const termsHash = await this.generateTermsHash({
-        text: bannerElement.textContent || '',
-        decision: accepted ? 'accepted' : 'declined'
-      });
+      try {
+        const termsHash = await this.generateTermsHash({
+          text: bannerElement.textContent || '',
+          decision: accepted ? 'accepted' : 'declined'
+        });
 
-      const consentData = {
-        siteDomain: window.location.hostname,
-        url: window.location.href,
-        termsHash: termsHash,
-        bannerContent: bannerElement.textContent || '', // Capture text for agreement storage
-        accepted: accepted,
-        decisionType: accepted ? 'accept' : 'decline',
-        timestamp: Date.now(),
-        userAgent: navigator.userAgent,
-        preferences: this.myTermsProfile?.preferences,
-        automationSource: 'MyTerms Extension'
-      };
+        const consentData = {
+          siteDomain: window.location.hostname,
+          url: window.location.href,
+          termsHash: termsHash,
+          bannerContent: bannerElement.textContent || '', // Capture text for agreement storage
+          accepted: accepted,
+          decisionType: accepted ? 'accept' : 'decline',
+          timestamp: Date.now(),
+          userAgent: navigator.userAgent,
+          preferences: this.myTermsProfile?.preferences,
+          automationSource: 'MyTerms Extension'
+        };
 
-      // Send to background script for queuing
-      chrome.runtime.sendMessage({
-        type: 'CONSENT_CAPTURED',
-        consent: consentData
-      });
+        // Send to background script for queuing
+        chrome.runtime.sendMessage({
+          type: 'CONSENT_CAPTURED',
+          consent: consentData
+        });
 
-      console.log(`Consent ${accepted ? 'accepted' : 'declined'} recorded for:`, window.location.hostname);
-    } catch (error) {
-      console.error('Failed to record consent:', error);
+        console.log(`Consent ${accepted ? 'accepted' : 'declined'} recorded for:`, window.location.hostname);
+      } catch (error) {
+        console.error('Failed to record consent:', error);
+      }
     }
-  }
 
   async generateTermsHash(content) {
-    try {
-      const contentStr = typeof content === 'object' ? JSON.stringify(content) : content;
-      const encoder = new TextEncoder();
-      const data = encoder.encode(contentStr);
-      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      try {
+        const contentStr = typeof content === 'object' ? JSON.stringify(content) : content;
+        const encoder = new TextEncoder();
+        const data = encoder.encode(contentStr);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 
-      // Return as bytes32 for Solidity compatibility
-      return '0x' + hashHex;
-    } catch (cryptoError) {
-      // Fallback to simple hash if crypto API is unavailable
-      console.warn('Crypto API unavailable, using fallback hash');
-      // Note: This fallback is not cryptographically secure and should only be used for non-critical identification
-      let hash = 0;
-      const contentStr = typeof content === 'object' ? JSON.stringify(content) : content;
-      for (let i = 0; i < contentStr.length; i++) {
-        const char = contentStr.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
+        // Return as bytes32 for Solidity compatibility
+        return '0x' + hashHex;
+      } catch (cryptoError) {
+        // Fallback to simple hash if crypto API is unavailable
+        console.warn('Crypto API unavailable, using fallback hash');
+        // Note: This fallback is not cryptographically secure and should only be used for non-critical identification
+        let hash = 0;
+        const contentStr = typeof content === 'object' ? JSON.stringify(content) : content;
+        for (let i = 0; i < contentStr.length; i++) {
+          const char = contentStr.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash;
+        }
+        // Prefix with 0x and pad to ensure it looks like a bytes32, but mark it as weak (starts with 0000)
+        return '0x0000' + Math.abs(hash).toString(16).padStart(60, '0');
       }
-      // Prefix with 0x and pad to ensure it looks like a bytes32, but mark it as weak (starts with 0000)
-      return '0x0000' + Math.abs(hash).toString(16).padStart(60, '0');
     }
-  }
 
-  // Cleanup method
-  disconnect() {
-    if (this.mutationObserver) {
-      this.mutationObserver.disconnect();
+    // Cleanup method
+    disconnect() {
+      if (this.mutationObserver) {
+        this.mutationObserver.disconnect();
+      }
+      if (this.intersectionObserver) {
+        this.intersectionObserver.disconnect();
+      }
+      console.log('Banner detector disconnected');
     }
-    if (this.intersectionObserver) {
-      this.intersectionObserver.disconnect();
-    }
-    console.log('Banner detector disconnected');
   }
-}
 
 // Global instance
 let bannerDetector = null;
