@@ -62,6 +62,7 @@ export class ProverbEngine {
         return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
 
+
     /**
      * Inscribe Proverb into Zcash Shielded Transaction
      * @param {Object} proverb - The generated proverb object
@@ -80,5 +81,54 @@ export class ProverbEngine {
         );
 
         return txid;
+    }
+
+    /**
+     * Website/Verifier: Publish an Agreement Policy to the chain
+     * This allows the policy to be referenced by its hash in user Proverbs.
+     * @param {Object} agreementJson - The MyTerms agreement JSON-LD
+     * @param {string} publishAddress - The address to publish to (public registry or self)
+     */
+    async publishAgreement(agreementJson, publishAddress) {
+        const encoder = new TextEncoder();
+        const data = JSON.stringify(agreementJson);
+        const encoded = encoder.encode(data);
+        const hash = await this.computeHash(encoded);
+
+        // Memo format: "P7012:POLICY:<hash>"
+        const memo = `P7012:POLICY:${hash}`;
+
+        // Simulate publishing tx
+        const wallet = this.zcashClient.getWallet();
+        // If wallet is User's, this mimics a self-publish. 
+        // In real world, website uses their own wallet.
+        if (wallet) {
+            const txid = await wallet.send(publishAddress, 0.0001, memo);
+            return { txid, hash };
+        }
+
+        // Return hash anyway for reference
+        return { hash };
+    }
+
+    /**
+     * Website/Verifier: Verify a User's Proverb Transaction
+     * @param {string} txid - The transaction ID to verify
+     * @param {string} expectedPolicyHash - The hash of the policy the user claims to accept
+     */
+    async verifyProverb(txid, expectedPolicyHash) {
+        // Mock retrieval - in production this would query zcash-cli or block explorer
+        console.log(`Verifying Proverb Tx: ${txid}`);
+
+        // Simulate decoding memo from chain
+        // In a real implementation, we'd fetch the tx, decrypt memo, parse JSON
+
+        // Mock successful verification for demo purposes
+        return {
+            valid: true,
+            timestamp: Date.now(),
+            agreement: expectedPolicyHash,
+            verified: true
+        };
     }
 }

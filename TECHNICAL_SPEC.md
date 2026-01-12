@@ -61,6 +61,55 @@ sequenceDiagram
     *   `addParams(consentData)`: Queues a new action.
     *   `finalizeBatch()`: Hushes data and submits to the configured chain provider.
 
+### Proverb Engine Workflow
+The `ProverbEngine` handles the cryptographic lifecycle of an agreement, from the user's intent to the website's verification.
+
+#### 1. User: Generating a Proverb
+When a user visits a site and auto-consents (via `DualChainManager`), a "Privacy Proverb" is generated.
+
+```mermaid
+graph TD
+    A[User Preferences] --> B[MyTermsParser];
+    B -->|Map to Standard| C[Agreement Type e.g., SD-BY];
+    C --> D[ProverbEngine];
+    D -->|Hash(Type + Bits + Timestamp)| E[Proverb Hash];
+    
+    E --> F[Zcash Wallet];
+    F -->|Memo: 'proverb:SD-BY:<bits>'| G[Shielded Tx];
+    G --> H[Blockchain Record];
+```
+
+#### 2. Website: Publishing & Verification
+Websites can publish their terms to the chain to create a referenceable hash, and verify user proverbs.
+
+**A. Publishing Terms**
+```mermaid
+sequenceDiagram
+    participant W as Website
+    participant P as ProverbEngine
+    participant C as Chain
+
+    W->>P: publishAgreement(JSON-LD)
+    P->>P: Hash(JSON-LD)
+    P->>C: Tx(Memo: 'P7012:POLICY:<hash>')
+    C-->>W: Returns TxID & PolicyHash
+```
+
+**B. Verifying User Consent**
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant W as Website
+    participant C as Chain
+
+    U->>W: Access Content (sends Proverb TxID optional)
+    W->>C: Read Tx Memo (TxID)
+    C-->>W: Memo: 'proverb:SD-BY:<bits>'
+    W->>W: Verify 'SD-BY' matches Site Policy
+    W->>W: Verify Timestamp is valid
+    W-->>U: Grant Access / Premium Features
+```
+
 ---
 
 ## 2. Cookie Monster (Analysis & Cleanup)

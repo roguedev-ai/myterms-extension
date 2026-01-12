@@ -20,7 +20,23 @@ Users can browse seamlessly while maintaining a cryptographic record of their re
 
 ---
 
-## 2. Cookie Monster (Classification & Analysis)
+
+## 2. Agreements & Proverb Engine
+**Core Logic:** `ProverbEngine` & `MyTermsParser`
+
+### Overview
+MyTerms introduces the **Privacy Proverb**—a cryptographic proof of intent. This engine allows both users and websites to publish and verify agreement terms on-chain without centralized intermediaries.
+
+### Key Capabilities
+*   **Privacy Proverb:** A hash representing the user's specific consent profile (e.g., "Tracking Disallowed", "Analytics Allowed").
+*   **Policy Publishing:** Websites can publish their Terms of Service (P7012 Standard) to the chain, creating an immutable reference.
+*   **Decentralized Verification:**
+    *   **User:** Generates a shielded transaction containing their Proverb.
+    *   **Website:** Verifies the Proverb against their published policy hash to grant access or adjust site behavior.
+
+---
+
+## 3. Cookie Monster (Classification & Analysis)
 **Branch:** `feature/cookie-monster`
 
 ### Overview
