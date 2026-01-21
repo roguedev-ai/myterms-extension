@@ -1,146 +1,116 @@
-# MyTerms Extension - Updated Architecture
+# ConsentChain Architecture Overview
 
-## 📊 Overview
+## 1. High-Level System Design
 
-MyTerms now has a dual-dashboard architecture that provides flexibility for users with or without blockchain features.
+ConsentChain is built on a **Hybrid Architecture** that combines local browser automation with decentralized verification.
 
-## 🏗️ Architecture
+### Core Stack
+*   **Extension**: JavaScript (ES6+), Manifest V3
+    *   **Frontend**: HTML5, CSS Grid, Chart.js
+    *   **Storage**: IndexedDB (Local Logs), chrome.storage (Preferences)
+*   **Blockchain**:
+    *   **Contract**: Solidity (EVM)
+    *   **Bridge**: ethers.js + Zcash Client (Mock)
+*   **Backend**:
+    *   **Rule Sync**: GitHub Raw (CDN)
+    *   **Dashboard**: Node.js (Localhost Server)
 
-### **1. Extension Dashboard** (chrome-extension://...)
-**Purpose**: Local data viewing and export (works offline)
+### System Context Diagram
 
-**Features**:
-- ✅ View all consent data
-- ✅ Analytics & statistics
-- ✅ Timeline view
-- ✅ Export to JSON/CSV (coming soon)
-- ❌ NO wallet/blockchain features
+```mermaid
+graph TB
+    User((User))
+    Web[Browser / Websites]
+    Ext[ConsentChain Extension]
+    DB[(IndexedDB)]
+    Chain[Blockchain / Zcash]
+    Git[GitHub Rule Repo]
 
-**Access**: Popup → "📊 Open Dashboard" button
-
----
-
-### **2. Blockchain Dashboard** (http://localhost:8080)
-**Purpose**: Full blockchain integration with wallet support
-
-**Features**:
-- ✅ Everything from Extension Dashboard
-- ✅ Connect wallets (MetaMask, WalletConnect, etc.)
-- ✅ Submit batches to blockchain
-- ✅ Force batch functionality
-- ✅ Network switching
-
-**Access**: 
-1. Enable in preferences: Extension Dashboard → Preferences → "Enable Blockchain Features"
-2. Popup → "⛓️ Blockchain Dashboard" button (only visible if enabled)
-3. Or directly at `http://localhost:8080`
-
-**Requirements**:
-- Server must be running: `npm run dashboard`
-- Wallet installed (MetaMask, etc.)
-
----
-
-### **3. Popup**
-**Purpose**: Quick stats view
-
-**Shows**:
-- Queued consents count
-- Total batches
-- Last batch info
-- Quick access buttons
-
-**Buttons**:
-- **"📊 Open Dashboard"**: Always visible → Opens Extension Dashboard
-- **"⛓️ Blockchain Dashboard"**: Only visible if blockchain enabled → Opens localhost:8080
-
----
-
-## ⚙️ Settings
-
-### Blockchain Toggle
-
-Users can enable/disable blockchain features in:
-1. Extension Dashboard → Preferences → Blockchain Settings
-2. Toggle "Enable Blockchain Features"
-3. Save Preferences
-
-When **enabled**:
-- Blockchain Dashboard button appears in popup
-- Can connect wallets and submit to blockchain
-
-When **disabled**:
-- Extension works completely offline
-- All data stored locally only
-- Blockchain features hidden
-
----
-
-## 🚀 How to Use
-
-### For Regular Users (No Blockchain)
-1. Install extension
-2. Browse websites - consents are automatically recorded
-3. View data in Extension Dashboard
-4. Export data if needed
-
-### For Blockchain Users
-1. Install extension
-2. Enable blockchain in preferences
-3. Start dashboard server: `npm run dashboard`
-4. Open blockchain dashboard from popup
-5. Connect wallet
-6. Submit batches to blockchain
-
----
-
-## 📁 File Changes
-
-### Modified Files:
-- `extension/popup/index.html` - Updated buttons
-- `extension/popup/popup.js` - Added blockchain settings check
-- `extension/dashboard/index.html` - Added blockchain toggle
-- `extension/dashboard/app.js` - Added blockchain preference handling
-- `extension/background.js` - Enhanced logging
-- `extension/content.js` - Enhanced bridge logging
-
-### New Files:
-- `serve-dashboard.js` - Node.js server for localhost dashboard
-- `DASHBOARD_README.md` - Dashboard documentation
-
----
-
-## 🔧 Development
-
-### Start Dashboard Server:
-```bash
-npm run dashboard
+    User -- "Browses" --> Web
+    Ext -- "Injects Logic" --> Web
+    Ext -- "Syncs Rules" --> Git
+    Ext -- "Stores Logs" --> DB
+    Ext -- "Batches Proofs" --> Chain
+    User -- "Views Analytics" --> Ext
 ```
 
-### Reload Extension:
-1. Go to `chrome://extensions`
-2. Click refresh on "MyTerms Consent Manager"
+---
 
-### View Logs:
-- **Extension Dashboard**: F12 on chrome-extension:// page
-- **Blockchain Dashboard**: F12 on http://localhost:8080
-- **Background Script**: chrome://extensions → "service worker" link
-- **Popup**: Right-click extension icon → "Inspect popup"
+## 2. Key Workflows
+
+### A. The Hybrid Detection Engine
+Combines deterministic rules with semantic heuristics.
+
+```mermaid
+graph TD
+    A[Page Load] --> B{Check URL against Rules};
+    B -- Match --> C[Consent-O-Matic Adapter];
+    B -- No Match --> D[Legacy Heuristic Detector];
+    
+    C --> C1[Extract Policy Data];
+    C --> C2[Execute Action (Click/Hide)];
+    
+    D --> D1[Scan DOM for Keywords];
+    D --> D2[Attempt Generic Interaction];
+    
+    C1 --> E[Proverb Engine];
+    D1 --> E;
+    
+    E --> F[Generate Hash];
+    
+    F --> G[Blockchain Queue];
+```
+
+### B. Dual-Chain Protocol (Verification)
+
+```mermaid
+sequenceDiagram
+    participant C as Content Script
+    participant B as Background
+    participant L as Local Storage
+    participant Z as Chain Bridge
+
+    C->>B: CONSENT_ACTION Captured
+    B->>L: Store Record (Immediate)
+    
+    loop Every 24 Hours / Threshold
+        B->>L: Fetch Pending Records
+        B->>B: Create Merkle Root / Hash Batch
+        B->>Z: Submit Batch Hash (Proof of Rejection)
+        Z-->>B: Tx Hash
+        B->>L: Update Records with Tx Hash
+    end
+```
 
 ---
 
-## 🎯 Future Enhancements
+## 3. Component Hierarchy
 
-1. **Export Feature**: Add JSON/CSV export to Extension Dashboard
-2. **Hosted Dashboard**: Deploy blockchain dashboard to a domain
-3. **Auto-start Server**: Background service to auto-start localhost server
-4. **Mobile Support**: React Native or WebView integration
+### Extension Components
+1.  **`content.js` (The Eye)**:
+    *   **`EnhancedConsentChainDetector`**: Orchestrator.
+    *   **`ConsentOMaticAdapter`**: Runs 200+ specific rules.
+    *   **`Matcher`**: CSS/XPath evaluation.
+2.  **`background.js` (The Brain)**:
+    *   **`DualChainManager`**: Manages batching and chain writes.
+    *   **`RuleSyncService`**: Keeps rules updated.
+    *   **`CookieClassifier`**: The "Cookie Monster" engine.
+3.  **Dashboard (The Face)**:
+    *   **`app.js`**: Single Page Application (SPA) logic.
+    *   **Dual-Dashboard**: Supports both Extension-popup view and Localhost full-view.
 
 ---
 
-## 📝 Notes
+## 4. Dual-Dashboard Architecture
+*(Legacy View)*
 
-- The bridge communication allows localhost dashboard to access extension data
-- All blockchain transactions require user approval (MetaMask popup)
-- Local data persists in IndexedDB even without blockchain
-- Users can switch between modes at any time
+### **1. Extension Dashboard** (chrome-extension://...)
+**Purpose**: Local data viewing and export (works offline).
+*   ✅ View all consent data
+*   ✅ Analytics & statistics
+*   ❌ NO wallet/blockchain features
+
+### **2. Blockchain Dashboard** (http://localhost:8080)
+**Purpose**: Full blockchain integration with wallet support.
+*   ✅ Submits batches to blockchain
+*   ✅ Connects MetaMask

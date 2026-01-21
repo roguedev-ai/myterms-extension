@@ -2,7 +2,7 @@
 
 > **Replace cookie banners with cryptographically verifiable, user-sovereign consent contracts.**
 
-![ConsentChain Logo](dashboard/icons/icon128.png)
+![ConsentChain Logo](extension/icons/icon128.png)
 
 ## Overview
 

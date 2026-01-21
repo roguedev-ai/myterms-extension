@@ -1,49 +1,30 @@
 # ConsentChain Technical Specification (V2.0)
 
-## 1. System Architecture (Hybrid V2)
+> **Note**: For high-level system design and component hierarchy, please refer to **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 
-ConsentChain V2 employs a **Hybrid Detection Engine** that prioritizes deterministic rules over heuristic guessing.
+## 1. Core Logic & implementation
 
-```mermaid
-graph TD
-    A[Page Load] --> B{Check URL against Rules};
-    B -- Match --> C[Consent-O-Matic Adapter];
-    B -- No Match --> D[Legacy Heuristic Detector];
-    
-    C --> C1[Extract Policy Data];
-    C --> C2[Execute Action (Click/Hide)];
-    
-    D --> D1[Scan DOM for Keywords];
-    D --> D2[Attempt Generic Interaction];
-    
-    C1 --> E[Proverb Engine];
-    D1 --> E;
-    
-    E --> F[Generate Hash];
-    F --> G[Blockchain Queue];
-```
+This document details the internal logic of the Proverb Engine, Cookie Monster, and Dual-Chain Protocol.
 
-### Components
+### A. Consent-O-Matic Adapter (`extension/lib/adapters`)
+*   **Class**: `ConsentOMaticAdapter`
+*   **Responsibility**:
+    1.  **Load Rules**: Deserializes JSON rules from `RuleSyncService`.
+    2.  **Detection**: Iterates through rules, executing their `detectors` (CSS/XPath).
+    3.  **Extraction**: If matched, runs `PolicyExtractor` to get `vendorList` and `purposes`.
+    4.  **Transformation**: Maps ConsentChain standard actions (`REJECT_ALL`, `ACCEPT_NECESSARY`) to the specific CMP's method name (e.g., "deny_all" -> clicks `#onetrust-reject-all`).
 
-#### A. Consent-O-Matic Adapter (`extension/lib/adapters`)
-*   **Role**: Bridges the extension to the 200+ rule library.
-*   **Input**: DOM Document.
-*   **Output**: Standardized "Decision" object + Structured Policy Data (Vendors, Purposes).
-
-#### B. Rule Sync Service (`extension/lib/rule-sync`)
-*   **Role**: Keeps the local rule database fresh.
-*   **Mechanism**: Fetches JSON from upstream GitHub repo once/24h.
-*   **Storage**: Cached in `chrome.storage.local`.
-
-#### C. Policy Extractor (`extension/lib/policy-extractor`)
-*   **Role**: Parses the CMP's UI to understand *what* is being consented to.
-*   **Capabilities**:
-    *   Extract Vendor Lists (IAB TCF).
-    *   Map Purpose Categories (Analytics vs Functional).
+### B. Rule Sync Service (`extension/lib/rule-sync`)
+*   **Class**: `RuleSyncService`
+*   **Logic**:
+    *   `sync()`: Fetches `rules.json` from the upstream CDN.
+    *   `enhance()`: Merges local overrides from `custom-rules.json`.
+    *   `cache()`: Stores with a `lastUpdated` timestamp in `chrome.storage.local`.
+    *   **Fail-safe**: If fetch fails, falls back to the bundled `default-rules.json`.
 
 ---
 
-## 2. Dual-Chain Protocol
+## 2. Dual-Chain Protocol Implementation
 *(Unchanged from V1 - See below)*
 kground service worker (Chain management).
 
