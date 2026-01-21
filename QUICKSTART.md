@@ -1,226 +1,85 @@
-# 🚀 Quick Start Guide - MyTerms Extension
+# ConsentChain V2.0 - Quick Start Guide
 
-## Complete Workflow (Start to Finish)
-
-Follow these steps in order for local blockchain development:
-
----
+Welcome to ConsentChain! This guide will get you up and running with the extension and local blockchain environment in under 5 minutes.
 
 ## Prerequisites
-
-Before you start, make sure you have:
-- ✅ **Node.js** (v16 or higher) - [Download](https://nodejs.org/)
-- ✅ **MetaMask** browser extension - [Install](https://metamask.io/)
-- ✅ **Git** - [Download](https://git-scm.com/)
-- ✅ **Chrome/Brave/Edge** browser
+*   Node.js (v16+)
+*   Git
+*   Chrome or Edge Browser
+*   MetaMask (or any Web3 wallet extension)
 
 ---
 
-## Step 1: Clone the Repository
+## 1. Installation
 
+### A. Clone the Repository
 ```bash
 git clone https://github.com/roguedev-ai/myterms-extension.git
 cd myterms-extension
 ```
 
----
-
-## Step 2: Run Setup Script
-
-This installs all dependencies and prepares the environment:
-
+### B. Install Dependencies
+We have a setup script that installs NPM packages and acts as a vendor script to copy required libraries (ethers.js, etc.) into the extension folder.
 ```bash
 ./setup.sh
 ```
+*If `setup.sh` is not executable, run `chmod +x setup.sh` first.*
 
-**What it does:**
-- ✅ Installs npm dependencies
-- ✅ Compiles smart contracts
-- ✅ Runs tests
-- ✅ Generates extension icons
-- ✅ Copies dashboard to extension folder
-- ✅ Creates `.env` file from template
-
-**Important:** After setup completes, edit `.env` if you plan to deploy to Sepolia testnet (optional for local dev).
+### C. Build the Extension
+The extension code is mostly raw JS, but we need to ensure local rules and libraries are ready.
+```bash
+npm run build  # Optional if setup.sh ran successfully
+```
 
 ---
 
-## Step 3: Load Extension in Chrome
+## 2. Load the Extension
 
-1. Open Chrome and go to: `chrome://extensions/`
-2. Enable **"Developer mode"** (toggle in top-right)
-3. Click **"Load unpacked"**
-4. Select the `extension/` folder
-5. ✅ Extension is now installed!
+1.  Open your browser (Chrome/Edge).
+2.  Navigate to `chrome://extensions`.
+3.  Enable **Developer Mode** (toggle in top right).
+4.  Click **"Load unpacked"**.
+5.  Select the `extension/` folder inside the key `myterms-extension` directory.
+6.  You should see the **ConsentChain** icon appear in your toolbar.
 
 ---
 
-## Step 4: Start Local Blockchain
+## 3. Local Environment Setup
 
-Run the development script:
+To use the full batching and verification features, you need a local blockchain and the dashboard.
 
+### Start the Dev Environment
 ```bash
 ./dev-start.sh
 ```
-
-**What it does:**
-1. ✅ Starts Hardhat local blockchain (Chain ID: 31337)
-2. ✅ Deploys MyTermsConsentLedger smart contract
-3. ✅ Saves contract address to `deployments/localhost.json`
-4. ✅ Shows MetaMask setup instructions
-5. ✅ Asks if you want to fund a specific wallet (optional)
-6. ✅ Starts dashboard server at `http://localhost:8080`
-
-**Keep this terminal open!** The blockchain and dashboard are running here.
+This script will:
+1.  Start a local Hardhat node (simulated blockchain).
+2.  Deploy the `MyTermsConsentLedger` smart contract.
+3.  Start the Dashboard server at `http://localhost:3000`.
 
 ---
 
-## Step 5: Configure MetaMask
+## 4. Usage
 
-### A. Add Localhost Network
+### A. Configuration
+1.  Click the **ConsentChain icon** in your browser toolbar.
+2.  Go to **Preferences**.
+3.  Set your desired logic (e.g., "Reject All" vs "Necessary Only").
 
-1. Open MetaMask
-2. Click network dropdown (top of MetaMask)
-3. Click **"Add Network"** → **"Add network manually"**
-4. Fill in:
-   - **Network Name:** `Localhost 8545`
-   - **RPC URL:** `http://127.0.0.1:8545`
-   - **Chain ID:** `31337`
-   - **Currency Symbol:** `ETH`
-5. Click **"Save"**
+### B. Browse the Web
+Visit a site with a cookie banner (e.g., `stackoverflow.com`, `cookiebot.com`).
+*   **Observe**: The banner should disappear automatically.
+*   **Verify**: The extension icon badge will increment.
 
-### B. Import Test Account
-
-You have two options:
-
-**Option 1: Use Hardhat Test Account (Recommended)**
-1. Check the terminal where `dev-start.sh` is running
-2. Look at `hardhat-node.log` for private keys
-3. Copy any private key (without `0x` prefix)
-4. MetaMask → Click account icon → **"Import Account"**
-5. Paste private key → Import
-6. 🎉 You now have 10,000 test ETH!
-
-**Option 2: Use Your Existing Wallet (Manual Funding)**
-1. When `dev-start.sh` asks "Fund a specific wallet?"
-2. Type `y` and press Enter
-3. Paste your MetaMask address
-4. It will send 1000 test ETH to your wallet
+### C. The Dashboard
+1.  Go to `http://localhost:3000/dashboard/index.html`.
+2.  **Connect Wallet**: Click the button to connect MetaMask (use Localhost 8545 network).
+3.  **Timeline**: View your recent automated consents.
+4.  **Analytics**: See your Privacy Score and saved time.
+5.  **Force Batch**: Click the lightning bolt to write your pending consents to the local blockchain.
 
 ---
 
-## Step 6: Open Dashboard
-
-Open your browser and go to:
-```
-http://localhost:8080
-```
-
-1. Click **"Connect Wallet"**
-2. MetaMask will pop up
-3. Make sure **"Localhost 8545"** network is selected
-4. Approve connection
-5. ✅ Dashboard is connected!
-
----
-
-## Step 7: Enable Blockchain Features
-
-In the dashboard:
-1. Click **"Preferences"** tab
-2. Scroll to "Blockchain Settings"
-3. Toggle **"Enable Blockchain Features"** ON
-4. Click **"Save Preferences"**
-
-Now the **"⛓️ Blockchain Dashboard"** button will appear in the extension popup!
-
----
-
-## Step 8: Test the Extension
-
-1. Visit any website with a cookie banner
-2. The extension detects and records consents automatically
-3. Click the extension icon to see queued consents
-4. Click **"⛓️ Blockchain Dashboard"** in popup
-5. In dashboard, click **"Force Batch"** to submit to blockchain
-6. MetaMask will pop up - confirm the transaction
-7. ✅ Consents are now on the blockchain!
-
----
-
-## Complete Workflow Summary
-
-```
-1. Clone repo
-   ↓
-2. ./setup.sh (one-time setup)
-   ↓
-3. Load extension in Chrome
-   ↓
-4. ./dev-start.sh (starts blockchain)
-   ↓
-5. Configure MetaMask (add localhost network + import account)
-   ↓
-6. Open http://localhost:8080
-   ↓
-7. Enable blockchain in dashboard preferences
-   ↓
-8. Test on websites!
-```
-
----
-
-## Troubleshooting
-
-### "MetaMask not found" error
-- Make sure MetaMask extension is installed
-- Try refreshing the dashboard page
-
-### "Cannot connect to localhost:8545"
-- Make sure `./dev-start.sh` is running
-- Check if Hardhat node started (look at `hardhat-node.log`)
-
-### "Insufficient funds" error
-- Import a Hardhat test account (they have 10,000 ETH each)
-- Or use the funding option in `dev-start.sh`
-
-### "Nonce too low" error
-- MetaMask → Settings → Advanced
-- Click "Clear activity and nonce data"
-- Reconnect to localhost
-
-### Extension not working
-- Go to `chrome://extensions`
-- Click reload button on MyTerms extension
-- Check browser console for errors
-
----
-
-## Daily Development Workflow
-
-After initial setup, your daily workflow is:
-
-```bash
-# Start local blockchain + dashboard
-./dev-start.sh
-
-# In another terminal, make code changes
-# Then reload extension at chrome://extensions
-```
-
-That's it! The blockchain and dashboard stay running while you develop.
-
----
-
-## What's Next?
-
-- **[LOCAL_BLOCKCHAIN.md](LOCAL_BLOCKCHAIN.md)** - Deep dive into blockchain development
-- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development best practices
-- **[TESTING.md](TESTING.md)** - Testing guide
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture
-
----
-
-## Need Help?
-
-Check the documentation files above or create an issue on GitHub!
+## Next Steps
+*   Explore **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)** if you have issues.
+*   Read **[TECHNICAL_SPEC.md](TECHNICAL_SPEC.md)** to understand the Dual-Chain architecture.

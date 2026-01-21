@@ -1,11 +1,51 @@
-# Technical Specification & Logic Maps
+# ConsentChain Technical Specification (V2.0)
 
-This document details the technical implementation and workflows for the "Dual-Chain Protocol" and "Cookie Monster" features.
+## 1. System Architecture (Hybrid V2)
 
-## 1. Dual-Chain Protocol (Consent Automation)
+ConsentChain V2 employs a **Hybrid Detection Engine** that prioritizes deterministic rules over heuristic guessing.
 
-### Architecture
-The auto-consent system relies on a feedback loop between the content script (DOM interaction) and the background service worker (Chain management).
+```mermaid
+graph TD
+    A[Page Load] --> B{Check URL against Rules};
+    B -- Match --> C[Consent-O-Matic Adapter];
+    B -- No Match --> D[Legacy Heuristic Detector];
+    
+    C --> C1[Extract Policy Data];
+    C --> C2[Execute Action (Click/Hide)];
+    
+    D --> D1[Scan DOM for Keywords];
+    D --> D2[Attempt Generic Interaction];
+    
+    C1 --> E[Proverb Engine];
+    D1 --> E;
+    
+    E --> F[Generate Hash];
+    F --> G[Blockchain Queue];
+```
+
+### Components
+
+#### A. Consent-O-Matic Adapter (`extension/lib/adapters`)
+*   **Role**: Bridges the extension to the 200+ rule library.
+*   **Input**: DOM Document.
+*   **Output**: Standardized "Decision" object + Structured Policy Data (Vendors, Purposes).
+
+#### B. Rule Sync Service (`extension/lib/rule-sync`)
+*   **Role**: Keeps the local rule database fresh.
+*   **Mechanism**: Fetches JSON from upstream GitHub repo once/24h.
+*   **Storage**: Cached in `chrome.storage.local`.
+
+#### C. Policy Extractor (`extension/lib/policy-extractor`)
+*   **Role**: Parses the CMP's UI to understand *what* is being consented to.
+*   **Capabilities**:
+    *   Extract Vendor Lists (IAB TCF).
+    *   Map Purpose Categories (Analytics vs Functional).
+
+---
+
+## 2. Dual-Chain Protocol
+*(Unchanged from V1 - See below)*
+kground service worker (Chain management).
 
 #### Workflows
 

@@ -1,204 +1,86 @@
-# MyTerms Browser Plugin + Consent Ledger
+# ConsentChain V2.0 - Blockchain-Backed Consent Automation
+
+> **Replace cookie banners with cryptographically verifiable, user-sovereign consent contracts.**
+
+![ConsentChain Logo](dashboard/icons/icon128.png)
 
 ## Overview
 
-The MyTerms plugin replaces annoying cookie banners with automated consent handling powered by your own MyTerms Profile.
+**ConsentChain** (formerly MyTerms) is a browser extension that automates your interactions with cookie consent banners (CMPs) and anchors your decisions to the blockchain.
 
-It:
+**New in V2.0:** We have integrated the powerful **Consent-O-Matic** rule engine, instantly expanding support to widely used CMPs like OneTrust, Cookiebot, Quantcast, and 200+ others.
 
-- Auto-applies your privacy preferences.
-- Stores each consent decision locally.
-- Batch-logs hashes of decisions on-chain once per day for proof + accountability.
+### Why ConsentChain?
+1.  **Zero Banner Fatigue**: Automatically handles popups based on your preferences.
+2.  **Verifiable Truth**: Every consent decision is hashed and batched to a smart contract (`MyTermsConsentLedger`).
+3.  **Privacy Proverb**: A cryptographic proof of your intent, allowing for "don't ask me again" portability.
+4.  **Cookie Monster**: Analyzes and eats tracking cookies that violate your terms.
 
-Provides a dashboard to review all logged consents.
+---
 
-## Features
+## Key Features
 
-✅ Auto-accept/decline cookie banners.\
-✅ Local queue for consents (IndexedDB).\
-✅ Daily batch blockchain write (reduces wallet signing fatigue).\
-✅ Smart contract ledger (MyTermsConsentLedger.sol).\
-✅ Dashboard for history + verification.
+| Feature | Description |
+| :--- | :--- |
+| **Hybrid Detection Engine** | Combines **Consent-O-Matic** rules (200+ sites) with custom semantic heuristics for maximum coverage. |
+| **Privacy Proverbs** | Generates a hash (`SHA-256`) of your specific policy preferences (e.g., "Analytics: NO", "Functional: YES"). |
+| **Dual-Chain Storage** | **Public**: Ethereum/Sepolia for immutable policy anchoring.<br>**Private**: Zcash shielded transactions for user anonymity. |
+| **Cookie Monster** | Scans your browser for tracking cookies and deletes them if they mismatch your defined policy. |
+| **Dashboard** | A clean, local interface to view your consent timeline, manage keys, and verify blockchain proofs. |
 
-## Tech Stack
+---
 
-Smart Contract: Solidity, Hardhat.\
-Extension: JavaScript/TypeScript, Manifest v3, IndexedDB.\
-Blockchain Interaction: ethers.js.\
-UI: Plain JS + minimal HTML/CSS (upgradeable to React).
+## 🚀 Getting Started
 
-## Quick Start
+We have simplified the setup process. Please refer to our **[QUICKSTART.md](QUICKSTART.md)** for a step-by-step guide.
 
-> 📖 **New to the project? See [QUICKSTART.md](QUICKSTART.md) for a complete step-by-step guide!**
-
-### Automated Setup (Recommended)
+### Quick Command Line Setup
 ```bash
-# 1. Clone and setup
+# 1. Clone the repo
 git clone https://github.com/roguedev-ai/myterms-extension.git
 cd myterms-extension
+
+# 2. Setup dependencies (includes rule sync)
 ./setup.sh
 
-# 2. Load extension in Chrome (see QUICKSTART.md)
-
-# 3. Start local blockchain development
+# 3. Start local development environment
 ./dev-start.sh
 ```
 
-### Manual Setup
-
-### 1. Install Dependencies
-```bash
-npm install
-```
-
-### 2. Compile + Test Smart Contract
-```bash
-npx hardhat compile
-npx hardhat test
-```
-
-### 3. (Optional) Deploy to Sepolia
-```bash
-# Copy and configure .env file
-cp .env.example .env
-# Edit .env with your settings
-
-# Deploy
-npx hardhat run scripts/deploy.js --network sepolia
-```
-
-### 4. Load Extension in Browser
-
-Open Chrome/Edge → Extensions → "Load unpacked".\
-Select `extension/` folder.\
-The plugin will auto-run on supported websites.
-
-**For detailed testing instructions, see [TESTING.md](TESTING.md)**
-
-### 5. Dashboard
-
-Open `dashboard/index.html` in a browser.\
-Connect wallet → view logged consent history.
+---
 
 ## Documentation
 
-- **[QUICKSTART.md](QUICKSTART.md)** - **⭐ Complete beginner's guide** (start here!)
-- **[README.md](README.md)** - This file (overview and quick start)
-- **[LOCAL_BLOCKCHAIN.md](LOCAL_BLOCKCHAIN.md)** - Local blockchain setup with Hardhat
-- **[DEVELOPMENT.md](DEVELOPMENT.md)** - Development guide and workflows
-- **[TESTING.md](TESTING.md)** - Comprehensive testing guide
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** - Dual-dashboard architecture
-- **[DASHBOARD_README.md](DASHBOARD_README.md)** - Dashboard server guide
+*   **[QUICKSTART.md](QUICKSTART.md)**: Installation, Wallet Setup, and First Run.
+*   **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**: Common issues (Localhost bridge, CMP detection failures).
+*   **[TECHNICAL_SPEC.md](TECHNICAL_SPEC.md)**: Deep dive into the Hybrid Architecture, Adapters, and Proverb Engine.
+*   **[EXECUTIVE_BRIEF.md](EXECUTIVE_BRIEF.md)**: High-level summary for stakeholders.
 
-## Repository Structure
+---
 
-```
-myterms-consent-plugin/
-├── contracts/
-│   └── MyTermsConsentLedger.sol     # Solidity smart contract
-├── hardhat.config.js                # Hardhat setup for deploy/tests
-├── package.json
-├── README.md
-├── extension/
-│   ├── manifest.json                # Browser extension manifest v3
-│   ├── background.js                # Handles batching + blockchain writes
-│   ├── content.js                   # Injected script to intercept cookie banners
-│   ├── popup/
-│   │   ├── index.html               # Extension popup UI
-│   │   └── popup.js                 # UI logic
-│   └── utils/
-│       ├── storage.js               # IndexedDB queue logic
-│       └── ethers.js                # Blockchain interaction
-└── dashboard/
-    ├── index.html                   # Simple web dashboard
-    ├── app.js                       # Shows consent history
-    └── style.css
-```
+## Architecture: The V2 Hybrid Engine
 
-## Development
+ConsentChain V2 uses a layered approach to handling banners:
 
-### Smart Contract
+1.  **Rule-Based Detection (Fast)**: Checks the site against a local cache of ~200 known CMP rules (synced from Consent-O-Matic). If a match is found (e.g., OneTrust), it uses the specific rule to extract policy data and execute the decision.
+2.  **Heuristic Fallback (Smart)**: If no rule matches, the legacy `EnhancedBannerDetector` scans the DOM for common patterns (buttons labeled "Technically Necessary", "Reject All", etc.) and attempts to negotiate.
 
-The core contract `MyTermsConsentLedger.sol` provides:
+### System Components
+*   **Extension**: Manifest V3, Content Scripts, Background Worker.
+*   **Smart Contract**: `MyTermsConsentLedger.sol` (Batch logging).
+*   **Dashboard**: Local web app for analytics and control.
 
-```solidity
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
-
-contract MyTermsConsentLedger {
-    event ConsentLogged(address indexed user, string site, bytes32 termsHash, uint timestamp);
-
-    function logConsentBatch(string[] calldata sites, bytes32[] calldata hashes) external {
-        require(sites.length == hashes.length, "Mismatched input");
-        for (uint i = 0; i < sites.length; i++) {
-            emit ConsentLogged(msg.sender, sites[i], hashes[i], block.timestamp);
-        }
-    }
-}
-```
-
-**Events:**
-- `ConsentLogged(user, siteDomain, termsHash, timestamp)`
-
-**Functions:**
-- `logConsent(siteDomain, termsHash)` - Single consent (gas inefficient).
-- `logConsentBatch(sites[], hashes[])` - Batch multiple consents.
-
-### Browser Extension
-
-**Manifest v3 Structure:**
-- Manages permissions for storage, host access, activeTab.
-- Background script for blockchain interactions.
-- Content script for DOM manipulation.
-- Popup for status + controls.
-
-**Workflow:**
-1. Detect cookie banner via DOM observation.
-2. Match against stored MyTerms profile.
-3. Auto-interact (click accept/decline).
-4. Queue consent data locally (IndexedDB).
-5. Background job batches.submit after threshold/timer.
-
-### Dashboard
-
-Plain HTML/JS dashboard for viewing logged consents:
-- Connect MetaMask/other wallet.
-- Display consent timeline.
-- Verify proof hashes.
-- Export consent data.
-
-## Testnet Deployment
-
-Deployed to Sepolia testnet for development:
-
-```bash
-// Contract address (after deployment)
-// 0x...MyTermsContractAddress
-
-// Usage in extension:
-const contract = new ethers.Contract(
-  contractAddress,
-  MyTermsConsentLedgerABI,
-  signer
-);
-```
-
-## Roadmap
-
-- **v0.1**: Local consent interception + queue. *(Current)*
-- **v0.2**: Smart contract batch logging.
-- **v0.3**: Dashboard with verification.
-- **v0.4**: Profile-driven negotiations (Agent ↔ Agent).
+---
 
 ## Contributing
 
-Fork → Create feature branch → PR.
+We welcome contributions! Specifically:
+*   **New CMP Rules**: Add support for more banner types via the `extension/lib/rules` directory.
+*   **Core Logic**: Improvements to the Proverb Engine or Chain Adapters.
 
-```bash
-git clone https://github.com/roguedev-ai/myterms-consent-plugin.git
-cd myterms-consent-plugin
-npm install
-# Make changes
-git add .
-git commit -m "Add feature"
-git push origin main
+See **[CONTRIBUTING.md](CONTRIBUTING.md)** for details.
+
+---
+
+## License
+MIT

@@ -36,7 +36,20 @@ MyTerms introduces the **Privacy Proverb**—a cryptographic proof of intent. Th
 
 ---
 
-## 3. Cookie Monster (Classification & Analysis)
+## 3. Hybrid Architecture (Consent-O-Matic Integration)
+**New in V2.0:** Integrated the "Consent-O-Matic" detection engine.
+
+### Overview
+To maximize coverage, we have moved to a hybrid architecture that combines our bespoke semantic heuristics with the open-source Consent-O-Matic rule library.
+
+### Key Capabilities
+*   **200+ Supported CMPs:** Native support for OneTrust, Cookiebot, TrustArc, and hundreds of others.
+*   **Deterministic Detection:** Uses specific CSS selectors for 100% accurate identification of known banners.
+*   **Semantic Fallback:** If a rule is not found, the legacy AI-driven heuristic takes over (the "Dual-Chain" logic).
+
+---
+
+## 4. Cookie Monster (Classification & Analysis)
 **Branch:** `feature/cookie-monster`
 
 ### Overview
