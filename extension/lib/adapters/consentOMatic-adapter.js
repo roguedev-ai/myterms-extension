@@ -1,5 +1,6 @@
 import { CMPDetector } from '../consent-o-matic/detector.js';
 import { ActionExecutor } from '../consent-o-matic/actions.js';
+import { PolicyExtractor } from '../policy-extractor/extractor.js';
 
 export class ConsentOMaticAdapter {
     constructor() {
@@ -33,12 +34,15 @@ export class ConsentOMaticAdapter {
         // Use highest confidence match
         const cmpMatch = detections[0];
 
+        // Initialize Extractor with the matched rule
+        const extractor = new PolicyExtractor(cmpMatch.cmpRule);
+        const policyData = await extractor.extract(document);
+
         return {
             cmpProvider: cmpMatch.cmpName,
             cmpVersion: cmpMatch.cmpRule.version || 'unknown',
             detectionMethod: 'consent-o-matic',
-            // Phase 2: Add policy extraction here
-            policyData: null,
+            policyData: policyData,
             consentOptions: cmpMatch.cmpRule.methods
         };
     }
