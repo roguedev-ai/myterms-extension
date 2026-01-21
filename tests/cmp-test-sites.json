@@ -1,0 +1,22 @@
+{
+  "testSites": [
+    {
+      "name": "OneTrust Example (onetrust.com)",
+      "url": "https://www.onetrust.com",
+      "expectedCMP": "OneTrust",
+      "testCases": ["detect_cmp"]
+    },
+    {
+      "name": "Cookiebot Example (cookiebot.com)",
+      "url": "https://www.cookiebot.com",
+      "expectedCMP": "Cookiebot",
+      "testCases": ["detect_cmp"]
+    },
+    {
+      "name": "Quantcast Example (quantcast.com)",
+      "url": "https://www.quantcast.com",
+      "expectedCMP": "Quantcast",
+      "testCases": ["detect_cmp"]
+    }
+  ]
+}

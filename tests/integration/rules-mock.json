@@ -1,0 +1,62 @@
+[
+    {
+        "name": "OneTrust",
+        "detectors": [
+            {
+                "presentMatcher": {
+                    "type": "css",
+                    "selector": "#onetrust-consent-sdk, .onetrust-pc-dark-filter"
+                }
+            }
+        ],
+        "methods": [
+            {
+                "name": "ACCEPT_ALL",
+                "action": {
+                    "type": "click",
+                    "selector": "#onetrust-accept-btn-handler"
+                }
+            }
+        ]
+    },
+    {
+        "name": "Cookiebot",
+        "detectors": [
+            {
+                "presentMatcher": {
+                    "type": "css",
+                    "selector": "#CybotCookiebotDialog, #CookiebotSessionPixel"
+                }
+            }
+        ],
+        "methods": [
+            {
+                "name": "ACCEPT_ALL",
+                "action": {
+                    "type": "click",
+                    "selector": "#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll"
+                }
+            }
+        ]
+    },
+    {
+        "name": "Quantcast",
+        "detectors": [
+            {
+                "presentMatcher": {
+                    "type": "css",
+                    "selector": ".qc-cmp2-container, #qc-cmp2-ui"
+                }
+            }
+        ],
+        "methods": [
+            {
+                "name": "ACCEPT_ALL",
+                "action": {
+                    "type": "click",
+                    "selector": "button[mode='primary']"
+                }
+            }
+        ]
+    }
+]
