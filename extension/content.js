@@ -223,12 +223,13 @@ class EnhancedConsentChainDetector {
   async queueConsentRecord(record) {
     // Send to background script for batching
     chrome.runtime.sendMessage({
-      type: 'CONSENT_CAPTURED_V2',
+      type: 'CONSENT_CAPTURED',
       consent: {
         ...record,
         timestamp: Date.now(),
         url: window.location.href,
-        domain: window.location.hostname
+        siteDomain: window.location.hostname,
+        version: 'v2'
       }
     });
   }
