@@ -597,14 +597,10 @@ class DashboardApp {
 
     }
 
-    if(!isMonster && scoreText && !isError) {
-    // Let renderReport handle score text usually, but valid for errors
-}
-            }
-        }
 
-// Initialize on load if on analysis page
-if (window.location.pathname.includes('analysis.html')) {
+
+    // Initialize on load if on analysis page
+    if(window.location.pathname.includes('analysis.html')) {
     const dataService = new DataService();
     new AnalysisController(dataService);
 }
