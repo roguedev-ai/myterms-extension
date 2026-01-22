@@ -1396,16 +1396,28 @@ class DashboardApp {
             this.timelineChartInstance.destroy();
         }
 
-        // Aggregate data by date
+        // Aggregate data by date (Last 7 days default)
         const dateMap = {};
-        const sortedConsents = [...consents].sort((a, b) => a.timestamp - b.timestamp);
+        const today = new Date();
+        const daysToShow = 7;
 
-        sortedConsents.forEach(c => {
-            const date = new Date(c.timestamp).toLocaleDateString();
-            if (!dateMap[date]) dateMap[date] = { accept: 0, decline: 0 };
+        // Initialize last 7 days with 0
+        for (let i = daysToShow - 1; i >= 0; i--) {
+            const d = new Date();
+            d.setDate(today.getDate() - i);
+            const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            dateMap[dateStr] = { accept: 0, decline: 0, dateObj: d };
+        }
 
-            if (c.decisionType === 'accept') dateMap[date].accept++;
-            else dateMap[date].decline++;
+        consents.forEach(c => {
+            const date = new Date(c.timestamp);
+            const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+            // Only count if within our map range
+            if (dateMap[dateStr]) {
+                if (c.decisionType === 'accept') dateMap[dateStr].accept++;
+                else dateMap[dateStr].decline++;
+            }
         });
 
         const labels = Object.keys(dateMap);
@@ -1413,25 +1425,23 @@ class DashboardApp {
         const declineData = labels.map(d => dateMap[d].decline);
 
         this.timelineChartInstance = new Chart(ctx, {
-            type: 'line',
+            type: 'bar',
             data: {
                 labels: labels,
                 datasets: [
                     {
                         label: 'Accepted',
                         data: acceptData,
-                        borderColor: '#4CAF50',
-                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                        tension: 0.4,
-                        fill: true
+                        backgroundColor: '#10b981',
+                        borderRadius: 4,
+                        barPercentage: 0.6,
                     },
                     {
                         label: 'Declined',
                         data: declineData,
-                        borderColor: '#F44336',
-                        backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                        tension: 0.4,
-                        fill: true
+                        backgroundColor: '#ef4444',
+                        borderRadius: 4,
+                        barPercentage: 0.6,
                     }
                 ]
             },
@@ -1441,21 +1451,37 @@ class DashboardApp {
                 plugins: {
                     legend: {
                         position: 'top',
+                        labels: { usePointStyle: true, boxWidth: 8 }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        backgroundColor: '#1e293b',
+                        titleColor: '#f1f5f9',
+                        bodyColor: '#cbd5e1',
+                        borderColor: '#334155',
+                        borderWidth: 1
                     }
                 },
                 scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#64748b' }
+                    },
                     y: {
                         beginAtZero: true,
-                        ticks: {
-                            stepSize: 1
-                        }
+                        grid: { color: '#e2e8f0', borderDash: [2, 4] },
+                        ticks: { stepSize: 1, color: '#64748b' }
                     }
+                },
+                interaction: {
+                    mode: 'nearest',
+                    axis: 'x',
+                    intersect: false
                 }
             }
         });
     }
-
-    // ... (renderTimeline, renderSites, initCharts, updateCharts, clearData methods remain same)
 
     // Helper to keep existing methods intact while replacing the block
     renderTimeline(consents, append = false) {
@@ -1491,41 +1517,58 @@ class DashboardApp {
 
         sorted.forEach(consent => {
             try {
-                const status = consent.decisionType === 'accept' ? 'Accepted' : 'Declined';
-                const dateStr = new Date(consent.timestamp).toLocaleString();
-                const hashDisplay = consent.termsHash ? `${consent.termsHash.substring(0, 8)}...` : 'N/A';
+                const isAccept = consent.decisionType === 'accept';
+                const statusClass = isAccept ? 'accept' : 'decline';
+                const iconClass = isAccept ? 'fa-check' : 'fa-times';
+
+                const dateObj = new Date(consent.timestamp);
+                const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const dateStr = dateObj.toLocaleDateString([], { month: 'long', day: 'numeric' });
+
+                const hashDisplay = consent.termsHash ? `${consent.termsHash.substring(0, 16)}...` : 'Pending Generation';
 
                 const item = document.createElement('div');
                 item.className = 'timeline-item';
-                // Add data attributes for debugging
                 item.dataset.id = consent.timestamp;
 
                 item.innerHTML = `
-                    <div class="timeline-icon ${consent.decisionType || 'unknown'}">
-                        <i class="fas ${consent.decisionType === 'accept' ? 'fa-check' : 'fa-times'}"></i>
+                    <div class="timeline-icon ${statusClass}">
+                        <i class="fas ${iconClass}"></i>
                     </div>
+                    
                     <div class="timeline-content">
-                        <div class="timeline-header">
-                            <span class="site-domain">${consent.siteDomain || 'Unknown Site'}</span>
-                            <span class="time">${dateStr}</span>
+                        <div class="consent-header">
+                            <div class="site-info">
+                                <span class="consent-site">${consent.siteDomain || 'Unknown Site'}</span>
+                                <span class="consent-url">${new URL(consent.url).pathname}</span>
+                            </div>
+                            <span class="consent-timestamp">${timeStr} · ${dateStr}</span>
                         </div>
-                        <div class="timeline-details">
-                            <div class="detail-row">
-                                <span class="label">Status:</span>
-                                <span class="value ${consent.decisionType || ''}">${status}</span>
-                            </div>
-                            <div class="detail-row">
-                                <span class="label">Hash:</span>
-                                <span class="value hash" title="${consent.termsHash || ''}">${hashDisplay}</span>
-                            </div>
-                            <div class="cookie-section" id="cookies-${consent.timestamp}">
-                                <button class="secondary-btn small view-cookies-btn" 
-                                    data-domain="${consent.siteDomain}" 
-                                    data-url="${consent.url}" 
-                                    data-container="cookies-${consent.timestamp}">
-                                    🍪 View Cookies
-                                </button>
-                            </div>
+
+                        <div class="consent-body">
+                            <span class="decision-badge ${statusClass}">
+                                ${isAccept ? 'Allowed' : 'Blocked'}
+                            </span>
+                            <span class="consent-hash-mini" title="${consent.termsHash || ''}">
+                                <i class="fas fa-fingerprint"></i> ${hashDisplay}
+                            </span>
+                        </div>
+
+                        <div class="consent-footer">
+                             <button class="action-btn-sm view-cookies-btn" 
+                                data-domain="${consent.siteDomain}" 
+                                data-url="${consent.url}" 
+                                data-container="cookies-${consent.timestamp}">
+                                🍪 Cookies
+                            </button>
+                            ${consent.termsHash ? `
+                            <button class="action-btn-sm" onclick="navigator.clipboard.writeText('${consent.termsHash}')">
+                                📋 Copy Proof
+                            </button>` : ''}
+                        </div>
+                        
+                        <!-- Collapsible Cookie Container -->
+                        <div class="cookie-section hidden" id="cookies-${consent.timestamp}" style="margin-top: 15px; border-top: 1px dashed #e2e8f0; padding-top: 10px;">
                         </div>
                     </div>
                 `;
