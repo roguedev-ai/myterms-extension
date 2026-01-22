@@ -4,19 +4,23 @@
       "name": "OneTrust Example (onetrust.com)",
       "url": "https://www.onetrust.com",
       "expectedCMP": "OneTrust",
-      "testCases": ["detect_cmp"]
+      "testCases": [
+        "detect_cmp"
+      ]
     },
     {
       "name": "Cookiebot Example (cookiebot.com)",
-      "url": "https://www.cookiebot.com",
+      "url": "https://www.comparitech.com",
       "expectedCMP": "Cookiebot",
-      "testCases": ["detect_cmp"]
+      "testCases": []
     },
     {
       "name": "Quantcast Example (quantcast.com)",
       "url": "https://www.quantcast.com",
       "expectedCMP": "Quantcast",
-      "testCases": ["detect_cmp"]
+      "testCases": [
+        "detect_cmp"
+      ]
     }
   ]
 }

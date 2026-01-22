@@ -1,0 +1,62 @@
+[
+  {
+    "name": "OneTrust",
+    "detectors": [
+      {
+        "presentMatcher": {
+          "type": "css",
+          "selector": "#onetrust-consent-sdk, .onetrust-pc-dark-filter, #onetrust-banner-sdk"
+        }
+      }
+    ],
+    "methods": [
+      {
+        "name": "ACCEPT_ALL",
+        "action": {
+          "type": "click",
+          "selector": "#onetrust-accept-btn-handler, button#onetrust-accept-btn-handler"
+        }
+      }
+    ]
+  },
+  {
+    "name": "Cookiebot",
+    "detectors": [
+      {
+        "presentMatcher": {
+          "type": "css",
+          "selector": "#CybotCookiebotDialog, #CookiebotSessionPixel, #CookieConsent, [id^='CybotCookiebotDialog'], #Cookiebot"
+        }
+      }
+    ],
+    "methods": [
+      {
+        "name": "ACCEPT_ALL",
+        "action": {
+          "type": "click",
+          "selector": "#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll"
+        }
+      }
+    ]
+  },
+  {
+    "name": "Quantcast",
+    "detectors": [
+      {
+        "presentMatcher": {
+          "type": "css",
+          "selector": ".qc-cmp2-container, #qc-cmp2-ui, .qc-cmp-ui-container, [class*='qc-cmp']"
+        }
+      }
+    ],
+    "methods": [
+      {
+        "name": "ACCEPT_ALL",
+        "action": {
+          "type": "click",
+          "selector": "button[mode='primary'], .qc-cmp2-summary-buttons button:last-child"
+        }
+      }
+    ]
+  }
+]

@@ -59,6 +59,7 @@
         "utils/ethers-v6.js",
         "utils/storage.js",
         "utils/wallet-manager.js",
+        "default-rules.json",
         "popup/index.html",
         "dashboard/index.html"
       ],

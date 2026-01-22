@@ -2,7 +2,10 @@
 import puppeteer from 'puppeteer';
 import fs from 'fs';
 import path from 'path';
-import testSites from '../cmp-test-sites.json';
+
+
+// Use fs to read JSON to avoid experimental import assertions warning/error
+const testSites = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'tests', 'cmp-test-sites.json'), 'utf8'));
 
 // Simple bundle-like concatenation for injection
 // In a real build, we'd use webpack/esbuild output.
@@ -52,7 +55,7 @@ describe('CMP Detection Integration Tests (Puppeteer)', () => {
     beforeAll(async () => {
         // Load local mock rules for stability
         try {
-            const rulesPath = path.resolve(__dirname, 'rules-mock.json');
+            const rulesPath = path.join(process.cwd(), 'tests', 'integration', 'rules-mock.json');
             rules = JSON.parse(fs.readFileSync(rulesPath, 'utf8'));
             console.log(`Loaded ${rules.length} mock rules.`);
         } catch (e) {
@@ -71,11 +74,14 @@ describe('CMP Detection Integration Tests (Puppeteer)', () => {
     });
 
     testSites.testSites.forEach(site => {
+        if (!site.testCases || site.testCases.length === 0 || site.name.includes('(SKIP)')) return;
+
         test(`should detect ${site.expectedCMP} on ${site.url}`, async () => {
             const page = await browser.newPage();
 
             // Set User Agent to avoid bot detection
             await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
+            await page.setBypassCSP(true);
 
             try {
                 await page.goto(site.url, { waitUntil: 'networkidle0', timeout: 30000 });

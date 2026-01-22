@@ -1,6 +1,6 @@
 export class RuleSyncService {
     constructor() {
-        this.ruleSource = 'https://raw.githubusercontent.com/cavi-au/Consent-O-Matic/master/rules.json';
+        this.ruleSource = 'https://raw.githubusercontent.com/cavi-au/Consent-O-Matic/master/rules-list.json';
         this.localRulesKey = 'consentchain_rules';
         this.lastSyncKey = 'consentchain_last_sync';
     }
@@ -34,10 +34,38 @@ export class RuleSyncService {
 
         } catch (error) {
             console.error('Rule sync failed:', error);
-            return {
-                success: false,
-                error: error.message
-            };
+
+            // Fallback to bundled rules
+            try {
+                console.log('Attempting fallback to default-rules.json ...');
+                const url = chrome.runtime.getURL('default-rules.json');
+                const response = await fetch(url);
+                const defaultRules = await response.json();
+
+                // Enhance default rules too
+                const enhancedRules = await this.enhanceRules(defaultRules);
+
+                await chrome.storage.local.set({
+                    [this.localRulesKey]: enhancedRules,
+                    [this.lastSyncKey]: Date.now()
+                });
+
+                console.log(`Fallback success: Synced ${enhancedRules.length} default rules`);
+
+                return {
+                    success: true,
+                    ruleCount: enhancedRules.length,
+                    syncedAt: Date.now(),
+                    isFallback: true
+                };
+            } catch (fallbackError) {
+                console.error('Critical: Fallback rule load failed', fallbackError);
+                return {
+                    success: false,
+                    error: error.message,
+                    fallbackError: fallbackError.message
+                };
+            }
         }
     }
 

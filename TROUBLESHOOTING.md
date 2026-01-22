@@ -1,6 +1,14 @@
 # Troubleshooting Guide
 
-## Common Issues & Fixes
+### 3. CMP Detector Not Working
+**Symptoms:** No banners are detected, or "Rules not loaded" warning in console.
+**Cause:**
+*   Network firewall blocking access to GitHub (Rule Source).
+*   Missing `default-rules.json` fallback.
+**Solution:**
+*   ConsentChain V2.1 includes a **Bundled Fallback** mechanism. If the network sync fails, it automatically loads local rules.
+*   Verify `extension/default-rules.json` exists.
+*   Check console for "Fallback success: Synced default rules". & Fixes
 
 ### 1. "Localhost Bridge connection failed" / Dashboard not loading data
 **Symptoms:**
