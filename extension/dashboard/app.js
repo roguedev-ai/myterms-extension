@@ -595,526 +595,358 @@ class DashboardApp {
 
         // ... existing code ...
 
-        class AnalysisController {
-            constructor(dataService) {
-                this.dataService = dataService;
-                this.chart = null;
-                this.currentReport = null;
-                this.init();
-            }
+    }
 
-            async init() {
-                console.log('AnalysisController init');
-                this.bindEvents();
-                await this.runScan();
-            }
-
-            bindEvents() {
-                document.getElementById('refresh-btn')?.addEventListener('click', () => this.runScan());
-                document.getElementById('cookie-monster-btn')?.addEventListener('click', () => this.eatCookies());
-            }
-
-            async runScan() {
-                this.updateStatus('Scanning...');
-                try {
-                    // Request analysis from background
-                    const response = await this.dataService.request('ANALYZE_COOKIES');
-                    if (response.success) {
-                        this.currentReport = response.report;
-                        this.renderReport(response.report);
-                        this.updateStatus('Scan Complete');
-                    } else {
-                        this.updateStatus('Scan Failed', true);
-                    }
-                } catch (e) {
-                    console.error(e);
-                    this.updateStatus('Error: ' + e.message, true);
-                }
-            }
-
-            renderReport(report) {
-                // 1. Update Score
-                const scoreEl = document.getElementById('privacy-score');
-                const scoreTextEl = document.getElementById('score-text');
-
-                if (scoreEl) {
-                    scoreEl.textContent = report.privacyScore;
-                    scoreEl.style.color = this.getScoreColor(report.privacyScore);
-                }
-
-                if (scoreTextEl) {
-                    const badCount = report.stats.Analytics + report.stats.Marketing;
-                    if (badCount === 0) {
-                        scoreTextEl.textContent = 'Great! No tracking cookies found.';
-                    } else {
-                        scoreTextEl.textContent = `Found ${badCount} tracking cookies.`;
-                    }
-                }
-
-                // 2. Update Counts
-                document.getElementById('cookie-count').textContent = `${report.stats.total} total`;
-
-                // 3. Render Chart
-                this.renderChart(report.stats);
-
-                // 4. Render Table
-                this.renderTable(report.cookies);
-
-                // 5. Update Monster Button
-                const monsterBtn = document.getElementById('cookie-monster-btn');
-                const badCount = report.stats.Analytics + report.stats.Marketing;
-                if (monsterBtn) {
-                    monsterBtn.disabled = badCount === 0;
-                    monsterBtn.querySelector('span').textContent = badCount > 0 ? '🤤' : '😴';
-                }
-            }
-
-            renderChart(stats) {
-                const ctx = document.getElementById('cookieChart')?.getContext('2d');
-                if (!ctx) return;
-
-                if (this.chart) this.chart.destroy();
-
-                this.chart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Security', 'Functional', 'Analytics', 'Marketing', 'Unknown'],
-                        datasets: [{
-                            data: [
-                                stats.Security,
-                                stats.Functional,
-                                stats.Analytics,
-                                stats.Marketing,
-                                stats.Unknown
-                            ],
-                            backgroundColor: [
-                                '#059669', // Security (Green)
-                                '#2563eb', // Functional (Blue)
-                                '#d97706', // Analytics (Amber)
-                                '#dc2626', // Marketing (Red)
-                                '#4b5563'  // Unknown (Gray)
-                            ],
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'right',
-                                labels: { color: '#d1d5db' }
-                            }
-                        }
-                    }
-                });
-            }
-
-            renderTable(cookies) {
-                const tbody = document.getElementById('cookie-table-body');
-                if (!tbody) return;
-
-                tbody.innerHTML = cookies.map(c => `
-            <tr>
-                <td style="word-break: break-word; color: #fff;">${c.name}</td>
-                <td style="color: #9ca3af;">${c.domain}</td>
-                <td><span class="tag tag-${c.category}">${c.category}</span></td>
-                <td>${c.secure ? '🔒' : ''}</td>
-            </tr>
-        `).join('');
-            }
-
-            getScoreColor(score) {
-                if (score >= 80) return '#4ade80'; // Green
-                if (score >= 50) return '#facc15'; // Yellow
-                return '#ef4444'; // Red
-            }
-
-            async eatCookies() {
-                const btn = document.getElementById('cookie-monster-btn');
-                if (!btn || btn.disabled) return;
-
-                if (!confirm('Are you sure you want to eat (delete) all Analytics and Marketing cookies?')) return;
-
-                btn.disabled = true;
-                this.updateStatus('OM NOM NOM...', false, true); // True for "monster mode"
-
-                try {
-                    const response = await this.dataService.request('COOKIE_MONSTER', {
-                        categories: ['Analytics', 'Marketing']
-                    });
-
-                    if (response.success) {
-                        this.updateStatus(`Burp! Ate ${response.eatenCount} cookies.`);
-                        // Re-scan after delay
-                        setTimeout(() => this.runScan(), 1500);
-                    }
-                } catch (e) {
-                    console.error(e);
-                    this.updateStatus('Indigestion (Error): ' + e.message, true);
-                    btn.disabled = false;
-                }
-            }
-
-            updateStatus(msg, isError = false, isMonster = false) {
-                const el = document.getElementById('monster-status');
-                const scoreText = document.getElementById('score-text');
-
-                if (el) {
-                    el.textContent = msg;
-                    el.style.color = isError ? '#ef4444' : (isMonster ? '#facc15' : '#9ca3af');
-                }
-
-                if (!isMonster && scoreText && !isError) {
-                    // Let renderReport handle score text usually, but valid for errors
-                }
+    if(!isMonster && scoreText && !isError) {
+    // Let renderReport handle score text usually, but valid for errors
+}
             }
         }
 
-        // Initialize on load if on analysis page
-        if (window.location.pathname.includes('analysis.html')) {
-            const dataService = new DataService();
-            new AnalysisController(dataService);
+// Initialize on load if on analysis page
+if (window.location.pathname.includes('analysis.html')) {
+    const dataService = new DataService();
+    new AnalysisController(dataService);
+}
+
+
+// Network Switching
+const networkSelect = document.getElementById('networkSelect');
+if (networkSelect) {
+    networkSelect.addEventListener('change', (e) => this.handleNetworkSwitch(e.target.value));
+}
+
+// Timeline Cookie Actions (Delegation)
+if (this.timelineTimeline) {
+    this.timelineTimeline.addEventListener('click', (e) => {
+        // Handle View Cookies
+        if (e.target.classList.contains('view-cookies-btn')) {
+            const { domain, url, container } = e.target.dataset;
+            this.loadCookiesForEvent(domain, url, container);
         }
 
-
-        // Network Switching
-        const networkSelect = document.getElementById('networkSelect');
-        if (networkSelect) {
-            networkSelect.addEventListener('change', (e) => this.handleNetworkSwitch(e.target.value));
+        // Handle Delete All Cookies
+        if (e.target.classList.contains('delete-all-cookies-btn')) {
+            const { domain, url, container } = e.target.dataset;
+            this.deleteAllCookies(domain, url, container);
         }
 
-        // Timeline Cookie Actions (Delegation)
-        if (this.timelineTimeline) {
-            this.timelineTimeline.addEventListener('click', (e) => {
-                // Handle View Cookies
-                if (e.target.classList.contains('view-cookies-btn')) {
-                    const { domain, url, container } = e.target.dataset;
-                    this.loadCookiesForEvent(domain, url, container);
-                }
-
-                // Handle Delete All Cookies
-                if (e.target.classList.contains('delete-all-cookies-btn')) {
-                    const { domain, url, container } = e.target.dataset;
-                    this.deleteAllCookies(domain, url, container);
-                }
-
-                // Handle Delete Single Cookie
-                if (e.target.closest('.delete-cookie-btn')) {
-                    const btn = e.target.closest('.delete-cookie-btn');
-                    const { url, name, storeid } = btn.dataset;
-                    this.deleteSingleCookie(url, name, storeid, btn);
-                }
-            });
+        // Handle Delete Single Cookie
+        if (e.target.closest('.delete-cookie-btn')) {
+            const btn = e.target.closest('.delete-cookie-btn');
+            const { url, name, storeid } = btn.dataset;
+            this.deleteSingleCookie(url, name, storeid, btn);
         }
+    });
+}
     }
 
     async handleNetworkSwitch(network) {
-        try {
-            if (!window.ethereum) return;
+    try {
+        if (!window.ethereum) return;
 
-            const networks = {
-                'localhost': {
-                    chainId: '0x7A69', // 31337
-                    chainName: 'Localhost 8545',
-                    nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
-                    rpcUrls: ['http://127.0.0.1:8545']
-                },
-                'sepolia': {
-                    chainId: '0xAA36A7', // 11155111
-                    chainName: 'Sepolia',
-                    nativeCurrency: { name: 'Sepolia ETH', symbol: 'SEP', decimals: 18 },
-                    rpcUrls: ['https://sepolia.infura.io/v3/']
-                },
-                'mainnet': {
-                    chainId: '0x1'
-                }
-            };
-
-            const target = networks[network];
-            if (!target) return;
-
-            try {
-                await window.ethereum.request({
-                    method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: target.chainId }],
-                });
-            } catch (switchError) {
-                // This error code indicates that the chain has not been added to MetaMask.
-                if (switchError.code === 4902) {
-                    await window.ethereum.request({
-                        method: 'wallet_addEthereumChain',
-                        params: [target],
-                    });
-                } else {
-                    this.showError(`Failed to switch network: ${switchError.message}`);
-                }
+        const networks = {
+            'localhost': {
+                chainId: '0x7A69', // 31337
+                chainName: 'Localhost 8545',
+                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                rpcUrls: ['http://127.0.0.1:8545']
+            },
+            'sepolia': {
+                chainId: '0xAA36A7', // 11155111
+                chainName: 'Sepolia',
+                nativeCurrency: { name: 'Sepolia ETH', symbol: 'SEP', decimals: 18 },
+                rpcUrls: ['https://sepolia.infura.io/v3/']
+            },
+            'mainnet': {
+                chainId: '0x1'
             }
-        } finally {
-            // Hide loading overlay
-            const overlay = document.getElementById('loadingOverlay');
-            if (overlay) {
-                overlay.classList.add('hidden');
-                overlay.classList.remove('active');
+        };
+
+        const target = networks[network];
+        if (!target) return;
+
+        try {
+            await window.ethereum.request({
+                method: 'wallet_switchEthereumChain',
+                params: [{ chainId: target.chainId }],
+            });
+        } catch (switchError) {
+            // This error code indicates that the chain has not been added to MetaMask.
+            if (switchError.code === 4902) {
+                await window.ethereum.request({
+                    method: 'wallet_addEthereumChain',
+                    params: [target],
+                });
+            } else {
+                this.showError(`Failed to switch network: ${switchError.message}`);
             }
         }
+    } finally {
+        // Hide loading overlay
+        const overlay = document.getElementById('loadingOverlay');
+        if (overlay) {
+            overlay.classList.add('hidden');
+            overlay.classList.remove('active');
+        }
     }
+}
 
-    setupWalletListeners() {
-        walletManager.onWalletChange((wallet) => {
-            console.log('Wallet changed:', wallet);
-            this.updateWalletUI(wallet);
-            if (wallet) this.loadData(); // Reload with blockchain data
-            else this.clearBlockchainData(); // Keep local data
-        });
-    }
+setupWalletListeners() {
+    walletManager.onWalletChange((wallet) => {
+        console.log('Wallet changed:', wallet);
+        this.updateWalletUI(wallet);
+        if (wallet) this.loadData(); // Reload with blockchain data
+        else this.clearBlockchainData(); // Keep local data
+    });
+}
 
     async checkWalletConnection() {
-        // Wait for wallet manager to init
-        setTimeout(async () => {
-            const wallet = walletManager.getConnectedWallet();
-            if (wallet) {
-                this.updateWalletUI(wallet);
-                // Reload data to include blockchain info
-                this.loadData();
-            }
-        }, 1000);
-    }
+    // Wait for wallet manager to init
+    setTimeout(async () => {
+        const wallet = walletManager.getConnectedWallet();
+        if (wallet) {
+            this.updateWalletUI(wallet);
+            // Reload data to include blockchain info
+            this.loadData();
+        }
+    }, 1000);
+}
 
     async loadPreferences() {
-        try {
-            const prefs = await this.dataService.getPreferences();
-            if (prefs) {
-                this.prefs.denyAll.checked = prefs.denyAll;
-                this.prefs.analytics.checked = prefs.analytics;
-                this.prefs.marketing.checked = prefs.marketing;
-                this.prefs.functional.checked = prefs.functional;
-                this.prefs.social.checked = prefs.social;
-                this.prefs.blockchainEnabled.checked = prefs.blockchainEnabled || false;
-            }
-        } catch (error) {
-            console.error('Failed to load preferences:', error);
+    try {
+        const prefs = await this.dataService.getPreferences();
+        if (prefs) {
+            this.prefs.denyAll.checked = prefs.denyAll;
+            this.prefs.analytics.checked = prefs.analytics;
+            this.prefs.marketing.checked = prefs.marketing;
+            this.prefs.functional.checked = prefs.functional;
+            this.prefs.social.checked = prefs.social;
+            this.prefs.blockchainEnabled.checked = prefs.blockchainEnabled || false;
         }
+    } catch (error) {
+        console.error('Failed to load preferences:', error);
     }
+}
 
     async savePreferences() {
-        try {
-            this.saveStatus.textContent = 'Saving...';
-            this.saveStatus.className = 'save-status saving';
+    try {
+        this.saveStatus.textContent = 'Saving...';
+        this.saveStatus.className = 'save-status saving';
 
-            const newPrefs = {
-                denyAll: this.prefs.denyAll.checked,
-                analytics: this.prefs.analytics.checked,
-                marketing: this.prefs.marketing.checked,
-                functional: this.prefs.functional.checked,
-                social: this.prefs.social.checked,
-                blockchainEnabled: this.prefs.blockchainEnabled.checked,
-                necessary: true // Always true
-            };
+        const newPrefs = {
+            denyAll: this.prefs.denyAll.checked,
+            analytics: this.prefs.analytics.checked,
+            marketing: this.prefs.marketing.checked,
+            functional: this.prefs.functional.checked,
+            social: this.prefs.social.checked,
+            blockchainEnabled: this.prefs.blockchainEnabled.checked,
+            necessary: true // Always true
+        };
 
-            await this.dataService.savePreferences(newPrefs);
+        await this.dataService.savePreferences(newPrefs);
 
-            this.saveStatus.textContent = 'Saved!';
-            this.saveStatus.className = 'save-status saved';
-            setTimeout(() => {
-                this.saveStatus.textContent = '';
-                this.saveStatus.className = 'save-status';
-            }, 2000);
+        this.saveStatus.textContent = 'Saved!';
+        this.saveStatus.className = 'save-status saved';
+        setTimeout(() => {
+            this.saveStatus.textContent = '';
+            this.saveStatus.className = 'save-status';
+        }, 2000);
 
-            // Handle blockchain toggle
-            if (newPrefs.blockchainEnabled) {
-                if (!walletManager.getConnectedWallet()) {
-                    this.checkWalletConnection();
-                }
-            } else {
-                // If disabled, we don't necessarily disconnect (user might want to keep wallet connected for other things)
-                // But we should update UI to reflect that features are disabled if we want to be strict.
-                // For now, let's just stop auto-connecting on reload (which is handled by init).
-                // If the user explicitly disables it, maybe we should clear the blockchain data from view?
-                console.log('Blockchain features disabled.');
+        // Handle blockchain toggle
+        if (newPrefs.blockchainEnabled) {
+            if (!walletManager.getConnectedWallet()) {
+                this.checkWalletConnection();
             }
-
-        } catch (error) {
-            console.error('Failed to save preferences:', error);
-            this.saveStatus.textContent = 'Error saving';
-            this.saveStatus.className = 'save-status error';
+        } else {
+            // If disabled, we don't necessarily disconnect (user might want to keep wallet connected for other things)
+            // But we should update UI to reflect that features are disabled if we want to be strict.
+            // For now, let's just stop auto-connecting on reload (which is handled by init).
+            // If the user explicitly disables it, maybe we should clear the blockchain data from view?
+            console.log('Blockchain features disabled.');
         }
+
+    } catch (error) {
+        console.error('Failed to save preferences:', error);
+        this.saveStatus.textContent = 'Error saving';
+        this.saveStatus.className = 'save-status error';
     }
+}
 
     async handleClearData() {
-        if (!confirm('Are you sure you want to delete ALL consent history? This cannot be undone.')) {
+    if (!confirm('Are you sure you want to delete ALL consent history? This cannot be undone.')) {
+        return;
+    }
+
+    try {
+        await this.dataService.clearData();
+        alert('All data cleared successfully.');
+        this.loadData(); // Refresh view
+    } catch (error) {
+        console.error('Failed to clear data:', error);
+        alert('Failed to clear data: ' + error.message);
+    }
+}
+
+    async handleSimulateConsent() {
+    try {
+        const simulatedConsent = {
+            siteDomain: 'simulated-test.com',
+            url: 'http://simulated-test.com/page',
+            termsHash: '0x' + Array(64).fill('0').join(''),
+            accepted: true,
+            decisionType: 'accept',
+            timestamp: Date.now(),
+            userAgent: navigator.userAgent,
+            preferences: { analytics: false },
+            automationSource: 'Manual Simulation'
+        };
+
+        // Use DataService to send request (handles both extension and bridge modes)
+        const response = await this.dataService.request('CONSENT_CAPTURED', {
+            consent: simulatedConsent
+        });
+
+        if (response && response.success === false) {
+            throw new Error(response.error || 'Unknown error');
+        }
+
+        alert('Simulated consent event sent! Refreshing...');
+
+        // Wait a bit then reload
+        setTimeout(() => this.loadData(), 1000);
+
+    } catch (error) {
+        console.error('Failed to simulate consent:', error);
+        alert('Failed to simulate consent: ' + error.message);
+    }
+}
+
+    async handleForceBatchAction() {
+    try {
+        if (!confirm('This will bundle all pending consents and submit them to the blockchain. Continue?')) {
             return;
         }
 
-        try {
-            await this.dataService.clearData();
-            alert('All data cleared successfully.');
-            this.loadData(); // Refresh view
-        } catch (error) {
-            console.error('Failed to clear data:', error);
-            alert('Failed to clear data: ' + error.message);
+        const btn = document.getElementById('forceBatchButton');
+        if (btn) {
+            btn.textContent = '⏳ Preparing...';
+            btn.disabled = true;
         }
-    }
 
-    async handleSimulateConsent() {
-        try {
-            const simulatedConsent = {
-                siteDomain: 'simulated-test.com',
-                url: 'http://simulated-test.com/page',
-                termsHash: '0x' + Array(64).fill('0').join(''),
-                accepted: true,
-                decisionType: 'accept',
-                timestamp: Date.now(),
-                userAgent: navigator.userAgent,
-                preferences: { analytics: false },
-                automationSource: 'Manual Simulation'
-            };
+        // 1. Get batch data from background
+        console.log('Requesting batch preparation...');
+        const response = await this.dataService.request('PREPARE_BATCH');
 
-            // Use DataService to send request (handles both extension and bridge modes)
-            const response = await this.dataService.request('CONSENT_CAPTURED', {
-                consent: simulatedConsent
-            });
-
-            if (response && response.success === false) {
-                throw new Error(response.error || 'Unknown error');
-            }
-
-            alert('Simulated consent event sent! Refreshing...');
-
-            // Wait a bit then reload
-            setTimeout(() => this.loadData(), 1000);
-
-        } catch (error) {
-            console.error('Failed to simulate consent:', error);
-            alert('Failed to simulate consent: ' + error.message);
+        if (!response.success) {
+            throw new Error(response.error || 'Failed to prepare batch');
         }
-    }
 
-    async handleForceBatchAction() {
-        try {
-            if (!confirm('This will bundle all pending consents and submit them to the blockchain. Continue?')) {
-                return;
-            }
+        const batchData = response.data;
+        console.log('Batch prepared:', batchData);
 
-            const btn = document.getElementById('forceBatchButton');
-            if (btn) {
-                btn.textContent = '⏳ Preparing...';
-                btn.disabled = true;
-            }
-
-            // 1. Get batch data from background
-            console.log('Requesting batch preparation...');
-            const response = await this.dataService.request('PREPARE_BATCH');
-
-            if (!response.success) {
-                throw new Error(response.error || 'Failed to prepare batch');
-            }
-
-            const batchData = response.data;
-            console.log('Batch prepared:', batchData);
-
-            if (batchData.count === 0) {
-                alert('No consents ready to batch.');
-                if (btn) {
-                    btn.textContent = '⚡ Force Batch';
-                    btn.disabled = false;
-                }
-                return;
-            }
-
-            if (btn) btn.textContent = '✍️ Signing...';
-
-            // 2. Submit to blockchain using dashboard's wallet connection
-            // We use myTermsEthers directly since we are in the dashboard context
-            const txResult = await myTermsEthers.submitConsentBatch(
-                batchData.sites,
-                batchData.hashes
-            );
-
-            console.log('Batch submitted:', txResult);
-
-            if (btn) btn.textContent = '💾 Finalizing...';
-
-            // 3. Notify background to mark as batched
-            const completeResponse = await this.dataService.request('BATCH_COMPLETE', {
-                result: txResult,
-                batchData: batchData
-            });
-
-            if (!completeResponse.success) {
-                throw new Error(completeResponse.error || 'Failed to finalize batch');
-            }
-
-            alert(`Success! Batch of ${batchData.count} consents submitted.\nTx: ${txResult.hash}`);
-
-            // Refresh data
-            this.loadData();
-
-        } catch (error) {
-            console.error('Force batch failed:', error);
-            alert('Batch failed: ' + error.message);
-        } finally {
-            const btn = document.getElementById('forceBatchButton');
+        if (batchData.count === 0) {
+            alert('No consents ready to batch.');
             if (btn) {
                 btn.textContent = '⚡ Force Batch';
                 btn.disabled = false;
             }
+            return;
+        }
+
+        if (btn) btn.textContent = '✍️ Signing...';
+
+        // 2. Submit to blockchain using dashboard's wallet connection
+        // We use myTermsEthers directly since we are in the dashboard context
+        const txResult = await myTermsEthers.submitConsentBatch(
+            batchData.sites,
+            batchData.hashes
+        );
+
+        console.log('Batch submitted:', txResult);
+
+        if (btn) btn.textContent = '💾 Finalizing...';
+
+        // 3. Notify background to mark as batched
+        const completeResponse = await this.dataService.request('BATCH_COMPLETE', {
+            result: txResult,
+            batchData: batchData
+        });
+
+        if (!completeResponse.success) {
+            throw new Error(completeResponse.error || 'Failed to finalize batch');
+        }
+
+        alert(`Success! Batch of ${batchData.count} consents submitted.\nTx: ${txResult.hash}`);
+
+        // Refresh data
+        this.loadData();
+
+    } catch (error) {
+        console.error('Force batch failed:', error);
+        alert('Batch failed: ' + error.message);
+    } finally {
+        const btn = document.getElementById('forceBatchButton');
+        if (btn) {
+            btn.textContent = '⚡ Force Batch';
+            btn.disabled = false;
         }
     }
+}
 
     async loadMore() {
-        try {
-            this.loadMoreBtn.classList.add('loading');
-            this.loadMoreBtn.textContent = 'Loading...';
+    try {
+        this.loadMoreBtn.classList.add('loading');
+        this.loadMoreBtn.textContent = 'Loading...';
 
-            // Calculate current offset based on displayed items
-            const currentCount = document.querySelectorAll('.timeline-item').length;
+        // Calculate current offset based on displayed items
+        const currentCount = document.querySelectorAll('.timeline-item').length;
 
-            const data = await this.dataService.getConsentData(50, currentCount);
+        const data = await this.dataService.getConsentData(50, currentCount);
 
-            if (data.consents && data.consents.length > 0) {
-                this.renderTimeline(data.consents, true); // true = append
-            } else {
-                this.loadMoreBtn.textContent = 'No more events';
-                this.loadMoreBtn.disabled = true;
-            }
-
-            this.loadMoreBtn.classList.remove('loading');
-            if (!this.loadMoreBtn.disabled) this.loadMoreBtn.textContent = 'Load More Events';
-
-        } catch (error) {
-            console.error('Failed to load more:', error);
-            this.loadMoreBtn.textContent = 'Error loading more';
-            this.loadMoreBtn.classList.remove('loading');
+        if (data.consents && data.consents.length > 0) {
+            this.renderTimeline(data.consents, true); // true = append
+        } else {
+            this.loadMoreBtn.textContent = 'No more events';
+            this.loadMoreBtn.disabled = true;
         }
+
+        this.loadMoreBtn.classList.remove('loading');
+        if (!this.loadMoreBtn.disabled) this.loadMoreBtn.textContent = 'Load More Events';
+
+    } catch (error) {
+        console.error('Failed to load more:', error);
+        this.loadMoreBtn.textContent = 'Error loading more';
+        this.loadMoreBtn.classList.remove('loading');
     }
+}
 
     // Wallet Connection
     async connectWallet() {
-        try {
-            // Check if MetaMask is installed
+    try {
+        // Check if MetaMask is installed
+        if (typeof window.ethereum === 'undefined') {
+            // If not found, it might be loading asynchronously. Wait a bit.
+            await new Promise(resolve => setTimeout(resolve, 500));
             if (typeof window.ethereum === 'undefined') {
-                // If not found, it might be loading asynchronously. Wait a bit.
-                await new Promise(resolve => setTimeout(resolve, 500));
-                if (typeof window.ethereum === 'undefined') {
-                    alert('MetaMask not found! Please install MetaMask extension.');
-                    return;
-                }
+                alert('MetaMask not found! Please install MetaMask extension.');
+                return;
             }
-            this.walletStatus.innerHTML = '<span>Connecting...</span>';
-            await walletManager.connectWallet('metamask');
-        } catch (error) {
-            console.error('Failed to connect:', error);
-            this.walletStatus.innerHTML = '<span class="error">Connection Failed</span>';
-            alert('Failed to connect wallet: ' + error.message);
         }
+        this.walletStatus.innerHTML = '<span>Connecting...</span>';
+        await walletManager.connectWallet('metamask');
+    } catch (error) {
+        console.error('Failed to connect:', error);
+        this.walletStatus.innerHTML = '<span class="error">Connection Failed</span>';
+        alert('Failed to connect wallet: ' + error.message);
     }
+}
 
-    updateWalletUI(wallet) {
-        if (wallet && wallet.account) {
-            const shortAddr = `${wallet.account.substring(0, 6)}...${wallet.account.substring(38)}`;
-            this.walletStatus.className = 'wallet-status connected';
-            this.walletStatus.innerHTML = `
+updateWalletUI(wallet) {
+    if (wallet && wallet.account) {
+        const shortAddr = `${wallet.account.substring(0, 6)}...${wallet.account.substring(38)}`;
+        this.walletStatus.className = 'wallet-status connected';
+        this.walletStatus.innerHTML = `
                 <button class="connect-btn" id="forceBatchButton" style="margin-right: 10px; background: rgba(255, 255, 255, 0.1);">
                     ⚡ Force Batch
                 </button>
@@ -1123,13 +955,13 @@ class DashboardApp {
                     <span class="address" title="${wallet.account}">${shortAddr}</span>
                 </div>
             `;
-            // Re-attach listener for force batch
-            document.getElementById('forceBatchButton').addEventListener('click', () => this.handleForceBatchAction());
+        // Re-attach listener for force batch
+        document.getElementById('forceBatchButton').addEventListener('click', () => this.handleForceBatchAction());
 
-            if (this.connectBtn) this.connectBtn.style.display = 'none';
-        } else {
-            this.walletStatus.className = 'wallet-status';
-            this.walletStatus.innerHTML = `
+        if (this.connectBtn) this.connectBtn.style.display = 'none';
+    } else {
+        this.walletStatus.className = 'wallet-status';
+        this.walletStatus.innerHTML = `
                 <button class="connect-btn" id="forceBatchButton" style="margin-right: 10px; background: rgba(255, 255, 255, 0.1);">
                     ⚡ Force Batch
                 </button>
@@ -1137,195 +969,195 @@ class DashboardApp {
                     🔗 Connect Wallet
                 </button>
             `;
-            // Re-attach listeners since we replaced innerHTML
-            document.getElementById('connectButton').addEventListener('click', () => this.connectWallet());
-            document.getElementById('forceBatchButton').addEventListener('click', () => this.handleForceBatchAction());
-            this.connectBtn = document.getElementById('connectButton');
-            this.forceBatchBtn = document.getElementById('forceBatchButton');
-        }
+        // Re-attach listeners since we replaced innerHTML
+        document.getElementById('connectButton').addEventListener('click', () => this.connectWallet());
+        document.getElementById('forceBatchButton').addEventListener('click', () => this.handleForceBatchAction());
+        this.connectBtn = document.getElementById('connectButton');
+        this.forceBatchBtn = document.getElementById('forceBatchButton');
     }
+}
 
-    clearBlockchainData() {
-        // Reset stats that depend on blockchain
-        this.stats.txs.textContent = '--';
-        // Reload local data to ensure we still show what we have
-        this.loadData();
-    }
+clearBlockchainData() {
+    // Reset stats that depend on blockchain
+    this.stats.txs.textContent = '--';
+    // Reload local data to ensure we still show what we have
+    this.loadData();
+}
 
     async loadData() {
-        try {
-            this.showLoading(true);
+    try {
+        this.showLoading(true);
 
-            // Fetch paginated consents for timeline
-            const data = await this.dataService.getConsentData(this.limit, this.offset);
+        // Fetch paginated consents for timeline
+        const data = await this.dataService.getConsentData(this.limit, this.offset);
 
-            // Safety check for data.consents
-            const newConsents = data.consents || [];
+        // Safety check for data.consents
+        const newConsents = data.consents || [];
 
-            this.consents = this.offset === 0 ? newConsents : [...this.consents, ...newConsents];
+        this.consents = this.offset === 0 ? newConsents : [...this.consents, ...newConsents];
 
-            // Fetch aggregated sites data for charts and sites view
-            const sitesData = await this.dataService.getAllSitesData();
+        // Fetch aggregated sites data for charts and sites view
+        const sitesData = await this.dataService.getAllSitesData();
 
-            // Update UI
-            // Actually getStats in background returns totals, so we should use that for stats
-            const stats = await this.dataService.request('GET_STATS');
-            if (!stats.error) {
-                this.updateDashboardStats(stats);
-            }
-
-            this.renderTimeline(this.consents, this.offset > 0);
-            this.renderSites(sitesData); // Use full sites data
-            this.updateCharts(sitesData); // Use full sites data
-
-            // Check for load more
-            if (data.consents.length < this.limit) {
-                this.loadMoreBtn.style.display = 'none';
-            } else {
-                this.loadMoreBtn.style.display = 'block';
-            }
-
-        } catch (error) {
-            console.error('Failed to load data:', error);
-            this.showError('Failed to load data: ' + error.message);
-        } finally {
-            this.showLoading(false);
+        // Update UI
+        // Actually getStats in background returns totals, so we should use that for stats
+        const stats = await this.dataService.request('GET_STATS');
+        if (!stats.error) {
+            this.updateDashboardStats(stats);
         }
+
+        this.renderTimeline(this.consents, this.offset > 0);
+        this.renderSites(sitesData); // Use full sites data
+        this.updateCharts(sitesData); // Use full sites data
+
+        // Check for load more
+        if (data.consents.length < this.limit) {
+            this.loadMoreBtn.style.display = 'none';
+        } else {
+            this.loadMoreBtn.style.display = 'block';
+        }
+
+    } catch (error) {
+        console.error('Failed to load data:', error);
+        this.showError('Failed to load data: ' + error.message);
+    } finally {
+        this.showLoading(false);
     }
+}
 
-    updateDashboardStats(stats) {
-        if (this.stats.total) this.stats.total.textContent = stats.totalConsents || 0;
-        if (this.stats.sites) this.stats.sites.textContent = stats.totalSites || 0;
-        if (this.stats.txs) this.stats.txs.textContent = stats.totalBatches || 0;
+updateDashboardStats(stats) {
+    if (this.stats.total) this.stats.total.textContent = stats.totalConsents || 0;
+    if (this.stats.sites) this.stats.sites.textContent = stats.totalSites || 0;
+    if (this.stats.txs) this.stats.txs.textContent = stats.totalBatches || 0;
 
-        // Calculate privacy score
-        const total = stats.totalConsents || 0;
-        const declined = stats.totalDeclined || 0;
-        const score = total === 0 ? 100 : Math.round((declined / total) * 100);
+    // Calculate privacy score
+    const total = stats.totalConsents || 0;
+    const declined = stats.totalDeclined || 0;
+    const score = total === 0 ? 100 : Math.round((declined / total) * 100);
 
-        if (this.stats.score) {
-            this.stats.score.textContent = score;
-            // Color code score
-            this.stats.score.className = 'stat-value';
-            if (score >= 80) this.stats.score.classList.add('good');
-            else if (score >= 50) this.stats.score.classList.add('medium');
-            else this.stats.score.classList.add('bad');
-        }
+    if (this.stats.score) {
+        this.stats.score.textContent = score;
+        // Color code score
+        this.stats.score.className = 'stat-value';
+        if (score >= 80) this.stats.score.classList.add('good');
+        else if (score >= 50) this.stats.score.classList.add('medium');
+        else this.stats.score.classList.add('bad');
     }
+}
 
-    switchView(viewName) {
-        // Update buttons
-        this.viewBtns.forEach(btn => {
-            if (btn.dataset.view === viewName) btn.classList.add('active');
-            else btn.classList.remove('active');
-        });
+switchView(viewName) {
+    // Update buttons
+    this.viewBtns.forEach(btn => {
+        if (btn.dataset.view === viewName) btn.classList.add('active');
+        else btn.classList.remove('active');
+    });
 
-        // Update sections
-        Object.entries(this.views).forEach(([name, el]) => {
-            if (name === viewName) el.classList.remove('hidden');
-            else el.classList.add('hidden');
-        });
+    // Update sections
+    Object.entries(this.views).forEach(([name, el]) => {
+        if (name === viewName) el.classList.remove('hidden');
+        else el.classList.add('hidden');
+    });
 
-        if (viewName === 'timeline') {
-            this.loadData();
-        } else if (viewName === 'sites') {
-            this.loadData(); // This updates sites grid too
-        } else if (viewName === 'agreements') {
-            this.loadAgreements();
-        } else if (viewName === 'analytics') {
-            // Stats are updated by loadData
-            this.loadData();
-        }
+    if (viewName === 'timeline') {
+        this.loadData();
+    } else if (viewName === 'sites') {
+        this.loadData(); // This updates sites grid too
+    } else if (viewName === 'agreements') {
+        this.loadAgreements();
+    } else if (viewName === 'analytics') {
+        // Stats are updated by loadData
+        this.loadData();
     }
+}
 
-    // ... (loadData and processData methods remain same)
+// ... (loadData and processData methods remain same)
 
-    processData(consents, batches, globalStats) {
-        console.log('Dashboard: processData called with', consents ? consents.length : 0, 'consents');
-        if (!consents || consents.length === 0) {
-            this.noDataMsg.style.display = 'flex';
-            this.timelineTimeline.innerHTML = '';
-            // If no consents, but we have global stats, still update stats
-            if (globalStats && !globalStats.error) {
-                this.updateStatsFromGlobal(globalStats);
-            } else {
-                // Clear stats if no data and no global stats
-                this.stats.consents.textContent = 0;
-                this.stats.sites.textContent = 0;
-                this.stats.score.textContent = 100; // 100% privacy if no consents
-                this.stats.txs.textContent = 0;
-            }
-            return;
-        }
-
-        // Hide no data/error message completely
-        if (this.noDataMsg) {
-            this.noDataMsg.style.display = 'none';
-            this.noDataMsg.style.visibility = 'hidden';
-        }
-        // Update Stats with GLOBAL stats if available, otherwise fallback to local calculation
+processData(consents, batches, globalStats) {
+    console.log('Dashboard: processData called with', consents ? consents.length : 0, 'consents');
+    if (!consents || consents.length === 0) {
+        this.noDataMsg.style.display = 'flex';
+        this.timelineTimeline.innerHTML = '';
+        // If no consents, but we have global stats, still update stats
         if (globalStats && !globalStats.error) {
             this.updateStatsFromGlobal(globalStats);
         } else {
-            this.updateStatsFromLocal(consents || []);
+            // Clear stats if no data and no global stats
+            this.stats.consents.textContent = 0;
+            this.stats.sites.textContent = 0;
+            this.stats.score.textContent = 100; // 100% privacy if no consents
+            this.stats.txs.textContent = 0;
         }
-
-        // Render Timeline
-        this.renderTimeline(consents);
-        this.renderTimelineChart(consents);
-
-        // Render Sites
-        this.renderSites(consents);
-
-        // Update Charts
-        this.updateCharts(consents);
+        return;
     }
 
-    updateStatsFromGlobal(stats) {
-        // Update Total Consents
-        this.stats.total.textContent = stats.totalConsents || 0;
-
-        // Update Sites Tracked
-        this.stats.sites.textContent = stats.totalSites || 0;
-
-        // Update Privacy Score (mock calculation based on accept/reject ratio)
-        const total = stats.totalConsents || 0;
-        const rejected = stats.totalDeclined || 0;
-        const score = total === 0 ? 100 : Math.round((rejected / total) * 100);
-        this.stats.score.textContent = `${score}%`;
-
-        // Update Blockchain Txs
-        this.stats.txs.textContent = stats.totalBatches || 0;
+    // Hide no data/error message completely
+    if (this.noDataMsg) {
+        this.noDataMsg.style.display = 'none';
+        this.noDataMsg.style.visibility = 'hidden';
+    }
+    // Update Stats with GLOBAL stats if available, otherwise fallback to local calculation
+    if (globalStats && !globalStats.error) {
+        this.updateStatsFromGlobal(globalStats);
+    } else {
+        this.updateStatsFromLocal(consents || []);
     }
 
-    updateStatsFromLocal(consents) {
-        // Fallback if GET_STATS fails
-        if (!consents) return;
+    // Render Timeline
+    this.renderTimeline(consents);
+    this.renderTimelineChart(consents);
 
-        this.stats.total.textContent = consents.length;
-        const uniqueSites = new Set(consents.map(c => c.siteDomain)).size;
-        this.stats.sites.textContent = uniqueSites;
+    // Render Sites
+    this.renderSites(consents);
 
-        const declined = consents.filter(c => c.decisionType === 'decline').length;
-        const score = consents.length === 0 ? 100 : Math.round((declined / consents.length) * 100);
-        this.stats.score.textContent = `${score}%`;
-    }
+    // Update Charts
+    this.updateCharts(consents);
+}
+
+updateStatsFromGlobal(stats) {
+    // Update Total Consents
+    this.stats.total.textContent = stats.totalConsents || 0;
+
+    // Update Sites Tracked
+    this.stats.sites.textContent = stats.totalSites || 0;
+
+    // Update Privacy Score (mock calculation based on accept/reject ratio)
+    const total = stats.totalConsents || 0;
+    const rejected = stats.totalDeclined || 0;
+    const score = total === 0 ? 100 : Math.round((rejected / total) * 100);
+    this.stats.score.textContent = `${score}%`;
+
+    // Update Blockchain Txs
+    this.stats.txs.textContent = stats.totalBatches || 0;
+}
+
+updateStatsFromLocal(consents) {
+    // Fallback if GET_STATS fails
+    if (!consents) return;
+
+    this.stats.total.textContent = consents.length;
+    const uniqueSites = new Set(consents.map(c => c.siteDomain)).size;
+    this.stats.sites.textContent = uniqueSites;
+
+    const declined = consents.filter(c => c.decisionType === 'decline').length;
+    const score = consents.length === 0 ? 100 : Math.round((declined / consents.length) * 100);
+    this.stats.score.textContent = `${score}%`;
+}
 
     async loadCookiesForEvent(domain, url, containerId) {
-        const container = document.getElementById(containerId);
-        if (!container) return;
+    const container = document.getElementById(containerId);
+    if (!container) return;
 
-        container.innerHTML = '<span class="loading-text">Loading cookies...</span>';
+    container.innerHTML = '<span class="loading-text">Loading cookies...</span>';
 
-        try {
-            const cookies = await this.dataService.getCookies(domain);
+    try {
+        const cookies = await this.dataService.getCookies(domain);
 
-            if (cookies.length === 0) {
-                container.innerHTML = '<span class="no-data">No cookies found for this domain.</span>';
-                return;
-            }
+        if (cookies.length === 0) {
+            container.innerHTML = '<span class="no-data">No cookies found for this domain.</span>';
+            return;
+        }
 
-            let html = `<div class="cookie-list">
+        let html = `<div class="cookie-list">
                 <div class="cookie-header">
                     <span>Found ${cookies.length} cookies</span>
                     <button class="danger-btn small delete-all-cookies-btn" 
@@ -1334,8 +1166,8 @@ class DashboardApp {
                         data-container="${containerId}">Delete All</button>
                 </div>`;
 
-            cookies.forEach(cookie => {
-                html += `
+        cookies.forEach(cookie => {
+            html += `
                     <div class="cookie-item">
                         <div class="cookie-info">
                             <span class="cookie-name">${cookie.name}</span>
@@ -1349,193 +1181,193 @@ class DashboardApp {
                         </button>
                     </div>
                 `;
-            });
+        });
 
-            html += '</div>';
-            container.innerHTML = html;
+        html += '</div>';
+        container.innerHTML = html;
 
-        } catch (error) {
-            console.error('Error loading cookies:', error);
-            container.innerHTML = '<span class="error-text">Failed to load cookies</span>';
-        }
+    } catch (error) {
+        console.error('Error loading cookies:', error);
+        container.innerHTML = '<span class="error-text">Failed to load cookies</span>';
     }
+}
 
     async deleteSingleCookie(url, name, storeId, btnElement) {
-        if (!confirm(`Delete cookie "${name}"?`)) return;
+    if (!confirm(`Delete cookie "${name}"?`)) return;
 
-        const success = await this.dataService.deleteCookie(url, name, storeId);
-        if (success) {
-            // Remove the row
-            const row = btnElement.closest('.cookie-item');
-            if (row) row.remove();
-        } else {
-            alert('Failed to delete cookie');
-        }
+    const success = await this.dataService.deleteCookie(url, name, storeId);
+    if (success) {
+        // Remove the row
+        const row = btnElement.closest('.cookie-item');
+        if (row) row.remove();
+    } else {
+        alert('Failed to delete cookie');
     }
+}
 
     async deleteAllCookies(domain, url, containerId) {
-        if (!confirm(`Delete ALL cookies for ${domain}?`)) return;
+    if (!confirm(`Delete ALL cookies for ${domain}?`)) return;
 
-        const cookies = await this.dataService.getCookies(domain);
-        let deletedCount = 0;
+    const cookies = await this.dataService.getCookies(domain);
+    let deletedCount = 0;
 
-        for (const cookie of cookies) {
-            const success = await this.dataService.deleteCookie(url, cookie.name, cookie.storeId);
-            if (success) deletedCount++;
-        }
-
-        alert(`Deleted ${deletedCount} cookies.`);
-        this.loadCookiesForEvent(domain, url, containerId); // Reload
+    for (const cookie of cookies) {
+        const success = await this.dataService.deleteCookie(url, cookie.name, cookie.storeId);
+        if (success) deletedCount++;
     }
 
-    renderTimelineChart(consents) {
-        const ctx = document.getElementById('timelineChart').getContext('2d');
+    alert(`Deleted ${deletedCount} cookies.`);
+    this.loadCookiesForEvent(domain, url, containerId); // Reload
+}
 
-        // Destroy existing chart if it exists
-        if (this.timelineChartInstance) {
-            this.timelineChartInstance.destroy();
+renderTimelineChart(consents) {
+    const ctx = document.getElementById('timelineChart').getContext('2d');
+
+    // Destroy existing chart if it exists
+    if (this.timelineChartInstance) {
+        this.timelineChartInstance.destroy();
+    }
+
+    // Aggregate data by date (Last 7 days default)
+    const dateMap = {};
+    const today = new Date();
+    const daysToShow = 7;
+
+    // Initialize last 7 days with 0
+    for (let i = daysToShow - 1; i >= 0; i--) {
+        const d = new Date();
+        d.setDate(today.getDate() - i);
+        const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        dateMap[dateStr] = { accept: 0, decline: 0, dateObj: d };
+    }
+
+    consents.forEach(c => {
+        const date = new Date(c.timestamp);
+        const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+        // Only count if within our map range
+        if (dateMap[dateStr]) {
+            if (c.decisionType === 'accept') dateMap[dateStr].accept++;
+            else dateMap[dateStr].decline++;
         }
+    });
 
-        // Aggregate data by date (Last 7 days default)
-        const dateMap = {};
-        const today = new Date();
-        const daysToShow = 7;
+    const labels = Object.keys(dateMap);
+    const acceptData = labels.map(d => dateMap[d].accept);
+    const declineData = labels.map(d => dateMap[d].decline);
 
-        // Initialize last 7 days with 0
-        for (let i = daysToShow - 1; i >= 0; i--) {
-            const d = new Date();
-            d.setDate(today.getDate() - i);
-            const dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-            dateMap[dateStr] = { accept: 0, decline: 0, dateObj: d };
-        }
-
-        consents.forEach(c => {
-            const date = new Date(c.timestamp);
-            const dateStr = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-
-            // Only count if within our map range
-            if (dateMap[dateStr]) {
-                if (c.decisionType === 'accept') dateMap[dateStr].accept++;
-                else dateMap[dateStr].decline++;
-            }
-        });
-
-        const labels = Object.keys(dateMap);
-        const acceptData = labels.map(d => dateMap[d].accept);
-        const declineData = labels.map(d => dateMap[d].decline);
-
-        this.timelineChartInstance = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'Accepted',
-                        data: acceptData,
-                        backgroundColor: '#10b981',
-                        borderRadius: 4,
-                        barPercentage: 0.6,
-                    },
-                    {
-                        label: 'Declined',
-                        data: declineData,
-                        backgroundColor: '#ef4444',
-                        borderRadius: 4,
-                        barPercentage: 0.6,
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                        labels: { usePointStyle: true, boxWidth: 8 }
-                    },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false,
-                        backgroundColor: '#1e293b',
-                        titleColor: '#f1f5f9',
-                        bodyColor: '#cbd5e1',
-                        borderColor: '#334155',
-                        borderWidth: 1
-                    }
+    this.timelineChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Accepted',
+                    data: acceptData,
+                    backgroundColor: '#10b981',
+                    borderRadius: 4,
+                    barPercentage: 0.6,
                 },
-                scales: {
-                    x: {
-                        grid: { display: false },
-                        ticks: { color: '#64748b' }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: '#e2e8f0', borderDash: [2, 4] },
-                        ticks: { stepSize: 1, color: '#64748b' }
-                    }
-                },
-                interaction: {
-                    mode: 'nearest',
-                    axis: 'x',
-                    intersect: false
+                {
+                    label: 'Declined',
+                    data: declineData,
+                    backgroundColor: '#ef4444',
+                    borderRadius: 4,
+                    barPercentage: 0.6,
                 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { usePointStyle: true, boxWidth: 8 }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: '#1e293b',
+                    titleColor: '#f1f5f9',
+                    bodyColor: '#cbd5e1',
+                    borderColor: '#334155',
+                    borderWidth: 1
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#64748b' }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: '#e2e8f0', borderDash: [2, 4] },
+                    ticks: { stepSize: 1, color: '#64748b' }
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
             }
-        });
+        }
+    });
+}
+
+// Helper to keep existing methods intact while replacing the block
+renderTimeline(consents, append = false) {
+    console.log('Dashboard: renderTimeline called with', consents ? consents.length : 0, 'items');
+    if (consents && consents.length > 0) {
+        const sorted = [...consents].sort((a, b) => b.timestamp - a.timestamp);
+        console.log(`Dashboard: Rendering top item ID: ${sorted[0].id} (TS: ${sorted[0].timestamp})`);
     }
 
-    // Helper to keep existing methods intact while replacing the block
-    renderTimeline(consents, append = false) {
-        console.log('Dashboard: renderTimeline called with', consents ? consents.length : 0, 'items');
-        if (consents && consents.length > 0) {
-            const sorted = [...consents].sort((a, b) => b.timestamp - a.timestamp);
-            console.log(`Dashboard: Rendering top item ID: ${sorted[0].id} (TS: ${sorted[0].timestamp})`);
-        }
+    if (!this.timelineTimeline) {
+        console.error('Dashboard: Timeline container not found!');
+        return;
+    }
 
-        if (!this.timelineTimeline) {
-            console.error('Dashboard: Timeline container not found!');
-            return;
-        }
+    if (!append) {
+        this.timelineTimeline.innerHTML = '';
+    }
 
+    if (!consents || consents.length === 0) {
         if (!append) {
-            this.timelineTimeline.innerHTML = '';
+            this.timelineTimeline.innerHTML = '<div class="no-data-message">No consent history found.</div>';
         }
+        return;
+    }
 
-        if (!consents || consents.length === 0) {
-            if (!append) {
-                this.timelineTimeline.innerHTML = '<div class="no-data-message">No consent history found.</div>';
-            }
-            return;
-        }
+    // Sort by timestamp desc
+    const sorted = [...consents].sort((a, b) => b.timestamp - a.timestamp);
 
-        // Sort by timestamp desc
-        const sorted = [...consents].sort((a, b) => b.timestamp - a.timestamp);
+    // If we have data, make sure error message/container is hidden
+    if (sorted.length > 0) {
+        if (this.noDataMsg) this.noDataMsg.style.display = 'none';
+        if (this.timelineContainer) this.timelineContainer.style.display = 'none';
+    } else {
+        if (this.timelineContainer) this.timelineContainer.style.display = 'block';
+        if (this.noDataMsg) this.noDataMsg.style.display = 'flex';
+    }
 
-        // If we have data, make sure error message/container is hidden
-        if (sorted.length > 0) {
-            if (this.noDataMsg) this.noDataMsg.style.display = 'none';
-            if (this.timelineContainer) this.timelineContainer.style.display = 'none';
-        } else {
-            if (this.timelineContainer) this.timelineContainer.style.display = 'block';
-            if (this.noDataMsg) this.noDataMsg.style.display = 'flex';
-        }
+    sorted.forEach(consent => {
+        try {
+            const isAccept = consent.decisionType === 'accept';
+            const statusClass = isAccept ? 'accept' : 'decline';
+            const iconClass = isAccept ? 'fa-check' : 'fa-times';
 
-        sorted.forEach(consent => {
-            try {
-                const isAccept = consent.decisionType === 'accept';
-                const statusClass = isAccept ? 'accept' : 'decline';
-                const iconClass = isAccept ? 'fa-check' : 'fa-times';
+            const dateObj = new Date(consent.timestamp);
+            const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const dateStr = dateObj.toLocaleDateString([], { month: 'long', day: 'numeric' });
 
-                const dateObj = new Date(consent.timestamp);
-                const timeStr = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                const dateStr = dateObj.toLocaleDateString([], { month: 'long', day: 'numeric' });
+            const hashDisplay = consent.termsHash ? `${consent.termsHash.substring(0, 16)}...` : 'Pending Generation';
 
-                const hashDisplay = consent.termsHash ? `${consent.termsHash.substring(0, 16)}...` : 'Pending Generation';
+            const item = document.createElement('div');
+            item.className = 'timeline-item';
+            item.dataset.id = consent.timestamp;
 
-                const item = document.createElement('div');
-                item.className = 'timeline-item';
-                item.dataset.id = consent.timestamp;
-
-                item.innerHTML = `
+            item.innerHTML = `
                     <div class="timeline-icon ${statusClass}">
                         <i class="fas ${iconClass}"></i>
                     </div>
@@ -1576,54 +1408,54 @@ class DashboardApp {
                         </div>
                     </div>
                 `;
-                this.timelineTimeline.appendChild(item);
-            } catch (err) {
-                console.error('Error rendering timeline item:', err, consent);
-            }
-        });
+            this.timelineTimeline.appendChild(item);
+        } catch (err) {
+            console.error('Error rendering timeline item:', err, consent);
+        }
+    });
 
-        console.log('Dashboard: Timeline rendering complete');
-    }
+    console.log('Dashboard: Timeline rendering complete');
+}
 
 
 
 
     async loadAgreements() {
-        const agreementsList = document.getElementById('agreementsList');
-        if (!agreementsList) return;
+    const agreementsList = document.getElementById('agreementsList');
+    if (!agreementsList) return;
 
-        agreementsList.innerHTML = '<div class="loading-spinner">Loading agreements...</div>';
+    agreementsList.innerHTML = '<div class="loading-spinner">Loading agreements...</div>';
 
-        try {
-            const agreements = await this.dataService.getAllAgreements();
-            this.renderAgreements(agreements);
-        } catch (error) {
-            console.error('Failed to load agreements:', error);
-            agreementsList.innerHTML = `<div class="error-message">Failed to load agreements: ${error.message}</div>`;
-        }
+    try {
+        const agreements = await this.dataService.getAllAgreements();
+        this.renderAgreements(agreements);
+    } catch (error) {
+        console.error('Failed to load agreements:', error);
+        agreementsList.innerHTML = `<div class="error-message">Failed to load agreements: ${error.message}</div>`;
+    }
+}
+
+renderAgreements(agreements) {
+    const list = document.getElementById('agreementsList');
+    if (!list) return;
+
+    if (!agreements || agreements.length === 0) {
+        list.innerHTML = '<div class="no-data-message">No agreement texts captured yet.</div>';
+        return;
     }
 
-    renderAgreements(agreements) {
-        const list = document.getElementById('agreementsList');
-        if (!list) return;
+    list.innerHTML = '';
 
-        if (!agreements || agreements.length === 0) {
-            list.innerHTML = '<div class="no-data-message">No agreement texts captured yet.</div>';
-            return;
-        }
+    // Sort by firstSeen desc
+    agreements.sort((a, b) => b.firstSeen - a.firstSeen);
 
-        list.innerHTML = '';
+    agreements.forEach(agreement => {
+        const dateStr = new Date(agreement.firstSeen).toLocaleDateString();
+        const timeStr = new Date(agreement.firstSeen).toLocaleTimeString();
 
-        // Sort by firstSeen desc
-        agreements.sort((a, b) => b.firstSeen - a.firstSeen);
-
-        agreements.forEach(agreement => {
-            const dateStr = new Date(agreement.firstSeen).toLocaleDateString();
-            const timeStr = new Date(agreement.firstSeen).toLocaleTimeString();
-
-            const item = document.createElement('div');
-            item.className = 'agreement-card';
-            item.innerHTML = `
+        const item = document.createElement('div');
+        item.className = 'agreement-card';
+        item.innerHTML = `
                 <div class="agreement-header">
                     <div class="agreement-title">
                         <span class="domain">${agreement.siteDomain || 'Unknown'}</span>
@@ -1641,39 +1473,39 @@ class DashboardApp {
                 </div>
             `;
 
-            // Toggle logic
-            const header = item.querySelector('.agreement-header');
-            header.addEventListener('click', () => {
-                header.parentElement.classList.toggle('expanded');
-                // Rotate icon
-                const icon = header.querySelector('.agreement-toggle i');
-                if (header.parentElement.classList.contains('expanded')) {
-                    icon.style.transform = 'rotate(180deg)';
-                } else {
-                    icon.style.transform = 'rotate(0deg)';
-                }
-            });
-
-            list.appendChild(item);
+        // Toggle logic
+        const header = item.querySelector('.agreement-header');
+        header.addEventListener('click', () => {
+            header.parentElement.classList.toggle('expanded');
+            // Rotate icon
+            const icon = header.querySelector('.agreement-toggle i');
+            if (header.parentElement.classList.contains('expanded')) {
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                icon.style.transform = 'rotate(0deg)';
+            }
         });
-    }
 
-    escapeHtml(text) {
-        const div = document.createElement('div');
-        div.textContent = text;
-        return div.innerHTML;
-    }
+        list.appendChild(item);
+    });
+}
 
-    renderSites(sitesData) {
-        this.sitesGrid.innerHTML = '';
+escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 
-        // Sort by visit count desc
-        const sortedSites = [...sitesData].sort((a, b) => b.count - a.count);
+renderSites(sitesData) {
+    this.sitesGrid.innerHTML = '';
 
-        sortedSites.forEach(data => {
-            const card = document.createElement('div');
-            card.className = 'site-card';
-            card.innerHTML = `
+    // Sort by visit count desc
+    const sortedSites = [...sitesData].sort((a, b) => b.count - a.count);
+
+    sortedSites.forEach(data => {
+        const card = document.createElement('div');
+        card.className = 'site-card';
+        card.innerHTML = `
                 <h3>${data.domain}</h3>
                 <div class="site-stats">
                     <div class="site-stat">
@@ -1687,69 +1519,69 @@ class DashboardApp {
                 </div>
                 <div class="last-visit">Last: ${new Date(data.lastVisit).toLocaleDateString()}</div>
             `;
-            this.sitesGrid.appendChild(card);
-        });
-    }
+        this.sitesGrid.appendChild(card);
+    });
+}
 
-    initCharts() {
-        // Decisions Chart
-        const ctx1 = document.getElementById('decisionsChart').getContext('2d');
-        this.decisionsChart = new Chart(ctx1, {
-            type: 'doughnut',
-            data: {
-                labels: ['Accepted', 'Declined'],
-                datasets: [{
-                    data: [0, 0],
-                    backgroundColor: ['#4CAF50', '#F44336']
-                }]
-            }
-        });
+initCharts() {
+    // Decisions Chart
+    const ctx1 = document.getElementById('decisionsChart').getContext('2d');
+    this.decisionsChart = new Chart(ctx1, {
+        type: 'doughnut',
+        data: {
+            labels: ['Accepted', 'Declined'],
+            datasets: [{
+                data: [0, 0],
+                backgroundColor: ['#4CAF50', '#F44336']
+            }]
+        }
+    });
 
-        // Sites Chart
-        const ctx2 = document.getElementById('sitesChart').getContext('2d');
-        this.sitesChart = new Chart(ctx2, {
-            type: 'bar',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Consents',
-                    data: [],
-                    backgroundColor: '#2196F3'
-                }]
-            }
-        });
-    }
+    // Sites Chart
+    const ctx2 = document.getElementById('sitesChart').getContext('2d');
+    this.sitesChart = new Chart(ctx2, {
+        type: 'bar',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Consents',
+                data: [],
+                backgroundColor: '#2196F3'
+            }]
+        }
+    });
+}
 
-    updateCharts(sitesData) {
-        // 1. Decisions Chart
-        let accepted = 0;
-        let declined = 0;
+updateCharts(sitesData) {
+    // 1. Decisions Chart
+    let accepted = 0;
+    let declined = 0;
 
-        sitesData.forEach(site => {
-            accepted += site.accepted;
-            declined += site.declined;
-        });
+    sitesData.forEach(site => {
+        accepted += site.accepted;
+        declined += site.declined;
+    });
 
-        this.decisionsChart.data.datasets[0].data = [accepted, declined];
-        this.decisionsChart.update();
+    this.decisionsChart.data.datasets[0].data = [accepted, declined];
+    this.decisionsChart.update();
 
-        // 2. Sites Chart (Top 10)
-        const topSites = [...sitesData].sort((a, b) => b.count - a.count).slice(0, 10);
+    // 2. Sites Chart (Top 10)
+    const topSites = [...sitesData].sort((a, b) => b.count - a.count).slice(0, 10);
 
-        this.sitesChart.data.labels = topSites.map(s => s.domain);
-        this.sitesChart.data.datasets[0].data = topSites.map(s => s.count);
-        this.sitesChart.update();
-    }
+    this.sitesChart.data.labels = topSites.map(s => s.domain);
+    this.sitesChart.data.datasets[0].data = topSites.map(s => s.count);
+    this.sitesChart.update();
+}
 
-    clearData() {
-        this.stats.total.textContent = '--';
-        this.stats.sites.textContent = '--';
-        this.stats.txs.textContent = '--';
-        this.stats.score.textContent = '--';
-        this.timelineTimeline.innerHTML = '';
-        this.sitesGrid.innerHTML = '';
-        this.noDataMsg.style.display = 'flex';
-    }
+clearData() {
+    this.stats.total.textContent = '--';
+    this.stats.sites.textContent = '--';
+    this.stats.txs.textContent = '--';
+    this.stats.score.textContent = '--';
+    this.timelineTimeline.innerHTML = '';
+    this.sitesGrid.innerHTML = '';
+    this.noDataMsg.style.display = 'flex';
+}
 }
 
 
