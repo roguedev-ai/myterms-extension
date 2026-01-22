@@ -1,6 +1,21 @@
+// Enhanced ConsentChain Detector v2.0
+// Uses dynamic imports to avoid "Cannot use import statement outside a module" error
 
-import { ConsentOMaticAdapter } from './lib/adapters/consentOMatic-adapter.js';
-import { RuleSyncService } from './lib/rule-sync/sync-service.js';
+let ConsentOMaticAdapter, RuleSyncService;
+
+(async () => {
+  try {
+    const adapterModule = await import(chrome.runtime.getURL('lib/adapters/consentOMatic-adapter.js'));
+    const syncModule = await import(chrome.runtime.getURL('lib/rule-sync/sync-service.js'));
+    ConsentOMaticAdapter = adapterModule.ConsentOMaticAdapter;
+    RuleSyncService = syncModule.RuleSyncService;
+
+    // Initialize after imports are loaded
+    new EnhancedConsentChainDetector();
+  } catch (err) {
+    console.error('ConsentChain: Failed to load modules', err);
+  }
+})();
 
 class EnhancedConsentChainDetector {
   constructor() {

@@ -59,6 +59,11 @@
         "utils/ethers-v6.js",
         "utils/storage.js",
         "utils/wallet-manager.js",
+        "lib/*",
+        "lib/adapters/*",
+        "lib/rule-sync/*",
+        "lib/consent-o-matic/*",
+        "lib/policy-extractor/*",
         "default-rules.json",
         "popup/index.html",
         "dashboard/index.html"

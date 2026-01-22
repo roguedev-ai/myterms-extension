@@ -392,7 +392,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       consentStorage.getBatchStats()
     ])
       .then(([consents, batches]) => {
-        console.log('Background: Sending response with', consents.length, 'consents');
+        const ids = consents.map(c => c.id);
+        const newest = ids.length > 0 ? ids[0] : 'none';
+        const oldest = ids.length > 0 ? ids[ids.length - 1] : 'none';
+        console.log(`Background: Sending ${consents.length} consents. Newest ID: ${newest}, Oldest ID: ${oldest}`);
+
         sendResponse({ consents, batches });
       })
       .catch(error => {

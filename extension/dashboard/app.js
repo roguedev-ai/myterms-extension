@@ -1486,6 +1486,10 @@ class DashboardApp {
     // Helper to keep existing methods intact while replacing the block
     renderTimeline(consents, append = false) {
         console.log('Dashboard: renderTimeline called with', consents ? consents.length : 0, 'items');
+        if (consents && consents.length > 0) {
+            const sorted = [...consents].sort((a, b) => b.timestamp - a.timestamp);
+            console.log(`Dashboard: Rendering top item ID: ${sorted[0].id} (TS: ${sorted[0].timestamp})`);
+        }
 
         if (!this.timelineTimeline) {
             console.error('Dashboard: Timeline container not found!');
