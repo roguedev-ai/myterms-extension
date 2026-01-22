@@ -897,21 +897,4 @@ class EnhancedConsentChainDetector {
   }
 }
 
-// Global instance
-let bannerDetector = null;
 
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
-    bannerDetector = new EnhancedBannerDetector();
-  });
-} else {
-  bannerDetector = new EnhancedBannerDetector();
-}
-
-// Handle page unload
-window.addEventListener('beforeunload', () => {
-  if (bannerDetector) {
-    bannerDetector.disconnect();
-  }
-});
