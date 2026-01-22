@@ -23,6 +23,8 @@ class EnhancedConsentChainDetector {
     this.userProfile = null;
     this.detectedCMPs = new Set();
     this.legacyDetector = null; // Fallback
+    this.observed = new Set();
+    this.bannersFound = [];
 
     this.init();
   }
