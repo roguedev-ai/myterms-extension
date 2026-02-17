@@ -298,7 +298,8 @@ select:focus {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: 24px; /* Align with icon center */
+  left: 24px;
+  /* Align with icon center */
   width: 3px;
   background: #e2e8f0;
   border-radius: 2px;
@@ -307,7 +308,8 @@ select:focus {
 /* Timeline Item Container */
 .timeline-item {
   position: relative;
-  padding-left: 60px; /* Space for icon and line */
+  padding-left: 60px;
+  /* Space for icon and line */
   margin-bottom: 30px;
   opacity: 1;
   transform: translateY(0);
@@ -323,8 +325,9 @@ select:focus {
   height: 48px;
   border-radius: 50%;
   background: white;
-  border: 4px solid white; /* Creates gap from line */
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  border: 4px solid white;
+  /* Creates gap from line */
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -335,7 +338,8 @@ select:focus {
 .timeline-icon.accept {
   background: #10b981;
   color: white;
-  border-color: #f8fafc; /* Match background */
+  border-color: #f8fafc;
+  /* Match background */
 }
 
 .timeline-icon.decline {
@@ -350,7 +354,7 @@ select:focus {
   border-radius: 12px;
   padding: 1.25rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  border: 1px solid rgba(0,0,0,0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -424,17 +428,23 @@ select:focus {
 
 /* Hash Display */
 .consent-hash-mini {
-  font-family: 'Courier New', monospace;
+  font-family: 'Consolas', 'Courier New', monospace;
   font-size: 0.75rem;
-  background: #f1f5f9;
+  background: rgba(102, 126, 234, 0.08);
+  /* Transparent primary */
   padding: 4px 8px;
-  border-radius: 4px;
-  color: #475569;
-  border: 1px solid #e2e8f0;
-  max-width: 200px;
+  border-radius: 6px;
+  color: #5a67d8;
+  /* Primary 600 */
+  border: 1px solid rgba(102, 126, 234, 0.2);
+  max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  letter-spacing: -0.025em;
+  cursor: help;
+  /* Indicates info available */
+  font-weight: 500;
 }
 
 /* Card Actions */

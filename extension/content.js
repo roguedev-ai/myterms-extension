@@ -221,11 +221,17 @@ class EnhancedConsentChainDetector {
   }
 
   async queueConsentRecord(record) {
+    // Generate terms hash for batching
+    // Use policyData if available, otherwise fallback to provider + decision
+    const hashContent = record.policyData ? JSON.stringify(record.policyData) : (record.cmpProvider + record.decision);
+    const termsHash = await this.generateTermsHash(hashContent);
+
     // Send to background script for batching
     chrome.runtime.sendMessage({
       type: 'CONSENT_CAPTURED',
       consent: {
         ...record,
+        termsHash: termsHash,
         timestamp: Date.now(),
         url: window.location.href,
         siteDomain: window.location.hostname,
@@ -873,18 +879,29 @@ class EnhancedConsentChainDetector {
       // Return as bytes32 for Solidity compatibility
       return '0x' + hashHex;
     } catch (cryptoError) {
-      // Fallback to simple hash if crypto API is unavailable
+      // Fallback: Deterministic non-secure hash that looks like a valid bytes32
       console.warn('Crypto API unavailable, using fallback hash');
-      // Note: This fallback is not cryptographically secure and should only be used for non-critical identification
-      let hash = 0;
-      const contentStr = typeof content === 'object' ? JSON.stringify(content) : content;
+
+      const contentStr = typeof content === 'object' ? JSON.stringify(content) : String(content);
+
+      // 1. DJB2 hash as seed
+      let hash = 5381;
       for (let i = 0; i < contentStr.length; i++) {
-        const char = contentStr.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash;
+        hash = ((hash << 5) + hash) + contentStr.charCodeAt(i);
       }
-      // Prefix with 0x and pad to ensure it looks like a bytes32, but mark it as weak (starts with 0000)
-      return '0x0000' + Math.abs(hash).toString(16).padStart(60, '0');
+
+      // 2. Linear Congruential Generator to produce 64 hex chars
+      let hex = '';
+      let seed = Math.abs(hash);
+      const chars = '0123456789abcdef';
+
+      for (let i = 0; i < 64; i++) {
+        seed = (1664525 * seed + 1013904223) % 4294967296;
+        const index = Math.floor((seed / 4294967296) * 16);
+        hex += chars[index];
+      }
+
+      return '0x' + hex;
     }
   }
 
