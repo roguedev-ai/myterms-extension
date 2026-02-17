@@ -104,21 +104,8 @@ class EnhancedConsentChainDetector {
       }
     });
 
-    // Dashboard Bridge (Web -> Extension)
-    window.addEventListener('message', async (event) => {
-      if (event.source !== window || event.data.type !== 'MYTERMS_WEB_REQ') return;
-      console.log('Bridge received:', event.data);
-      try {
-        const response = await chrome.runtime.sendMessage(event.data.payload);
-        window.postMessage({
-          type: 'MYTERMS_WEB_RES',
-          requestId: event.data.requestId,
-          payload: response
-        }, '*');
-      } catch (e) {
-        console.error('Bridge error:', e);
-      }
-    });
+    // Note: Dashboard Bridge (Web -> Extension) is handled in setupWebBridge()
+    // to ensure correct response format (success/error wrapper).
   }
 
   async startDetection() {
