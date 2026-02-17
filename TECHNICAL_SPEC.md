@@ -1,10 +1,33 @@
-# ConsentChain Technical Specification (V2.0)
+# ConsentChain Technical Specification (v2.0-alpha.1)
+
+**Status**: Alpha Release (Feature Frozen)
+**Date**: February 2026
 
 > **Note**: For high-level system design and component hierarchy, please refer to **[ARCHITECTURE.md](ARCHITECTURE.md)**.
 
-## 1. Core Logic & implementation
+## 1. Introduction
 
-This document details the internal logic of the Proverb Engine, Cookie Monster, and Dual-Chain Protocol.
+ConsentChain v2.0 introduces a hybrid detection engine that significantly expands coverage and resilience.
+
+### Hybrid Detection Logic
+1.  **Rule-Based (Primary)**: The content script first attempts to match the current page against a collaborative library of 200+ CMP rules (via `ConsentOMaticAdapter`).
+2.  **Heuristic (Secondary)**: If no rule matches, the `EnhancedBannerDetector` scans the DOM for common patterns (e.g., "z-index: 9999", keywords "cookie", "agree").
+
+## 2. Data Model
+
+### Consent Record (V2)
+```json
+{
+  "id": "uuid-v4",
+  "siteDomain": "example.com",
+  "cmpProvider": "OneTrust",
+  "decision": "reject",
+  "timestamp": 1678901234567,
+  "termsHash": "0x8f2a...", // Deterministic SHA-256 of content
+  "policyData": { ... },     // Extracted TCF data if available
+  "batched": false
+}
+```
 
 ### A. Consent-O-Matic Adapter (`extension/lib/adapters`)
 *   **Class**: `ConsentOMaticAdapter`

@@ -1,29 +1,38 @@
-# ConsentChain V2.0 - Quick Start Guide
+# ConsentChain Quickstart Guide (v2.0-alpha.1)
 
-Welcome to ConsentChain! This guide will get you up and running with the extension and local blockchain environment in under 5 minutes.
+Get up and running with the ConsentChain extension in minutes.
 
 ## Prerequisites
-*   Node.js (v16+)
-*   Git
-*   Chrome or Edge Browser
-*   MetaMask (or any Web3 wallet extension)
+
+- **Node.js**: v14+ (Recommended: v18 LTS)
+- **Browser**: Google Chrome, Brave, or any Chromium-based browser.
+- **Git**: To clone the repository.
 
 ---
 
-## 1. Installation
+## Installation
 
-### A. Clone the Repository
+### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/roguedev-ai/myterms-extension.git
 cd myterms-extension
 ```
 
-### B. Install Dependencies
-We have a setup script that installs NPM packages and acts as a vendor script to copy required libraries (ethers.js, etc.) into the extension folder.
+### 2. Switch to Alpha Branch
+
+The latest stable release is on the `alpha` branch.
+
 ```bash
-./setup.sh
+git fetch origin alpha
+git checkout alpha
 ```
-*If `setup.sh` is not executable, run `chmod +x setup.sh` first.*
+
+### 3. Install Dependencies
+
+```bash
+npm install
+```
 
 ### C. Build the Extension
 The extension code is mostly raw JS, but we need to ensure local rules and libraries are ready.

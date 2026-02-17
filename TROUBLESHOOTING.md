@@ -38,6 +38,33 @@
 
 ---
 
+### ConsentChain Troubleshooting Guide (Alpha)
+
+Common issues and solutions for the ConsentChain v2.0-alpha.1 release.
+
+## General Issues
+
+### 1. Extension Not Loading
+- **Symptom**: "Error loading extension" in `chrome://extensions`.
+- **Fix**: Run `./dev-start.sh` to ensure all dependencies are copied to the `extension/` folder.
+
+### 2. Dashboard Shows "No Data"
+- **Symptom**: Timeline is empty despite visiting sites.
+- **Fix**:
+    -   Ensure you are visiting a site with a supported CMP (e.g., `stackoverflow.com`).
+    -   Check the console for "ConsentChain: CMP Detected".
+    -   Reload the extension.
+
+### 3. Zcash Wallet Not Connecting
+- **Symptom**: "Zcash Wallet not found" warning.
+- **Note**: In Alpha, Zcash integration is **mocked**. You do not need a real Zwall wallet. The extension simulates the inscription process for demonstration purposes.
+
+### 4. Bridge Connection Failed (Localhost)
+- **Symptom**: "Request timed out" on the localhost dashboard.
+- **Fix**: Ensure the extension is installed and enabled. The dashboard communicates with the extension via `window.postMessage`.
+
+---
+
 ### 3. "Wallet not connected" / "User denied transaction"
 **Symptoms:**
 *   Clicking "Force Batch" does nothing or fails immediately.

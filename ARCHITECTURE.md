@@ -1,19 +1,28 @@
-# ConsentChain Architecture Overview
+# ConsentChain Architecture (v2.0-alpha.1)
 
-## 1. High-Level System Design
+**Status**: Alpha Release (Mock Blockchain)
+**Date**: February 2026
 
-ConsentChain is built on a **Hybrid Architecture** that combines local browser automation with decentralized verification.
+## System Overview
 
-### Core Stack
-*   **Extension**: JavaScript (ES6+), Manifest V3
-    *   **Frontend**: HTML5, CSS Grid, Chart.js
-    *   **Storage**: IndexedDB (Local Logs), chrome.storage (Preferences)
-*   **Blockchain**:
-    *   **Contract**: Solidity (EVM)
-    *   **Bridge**: ethers.js + Zcash Client (Mock)
-*   **Backend**:
-    *   **Rule Sync**: GitHub Raw (CDN)
-    *   **Dashboard**: Node.js (Localhost Server)
+ConsentChain is a browser extension that bridges user privacy preferences with blockchain-backed verification.
+
+### Core Components
+
+1.  **Content Script (`content.js`)**:
+    *   **Hybrid Detector**: Uses `ConsentOMaticAdapter` for rule-based detection and `EnhancedBannerDetector` for heuristic fallback.
+    *   **Action Executor**: Clicks "Reject/Accept" buttons based on user profile.
+    *   **Proverb Generator**: Hashes the decision + policy data into a unique "Terms Hash".
+
+2.  **Background Service (`background.js`)**:
+    *   **Consent Manager**: Queues consent events in IndexedDB.
+    *   **Dual Chain Manager**: Coordinates inscriptions to Zcash (Mock) and Ethereum (Sepolia).
+    *   **Batch Processor**: Aggregates consents into a Merkle tree for gas-efficient logging.
+
+3.  **Dashboard (`dashboard/index.html`)**:
+    *   **Timeline**: Visualizes consent history.
+    *   **Cookie Monster**: Analyzes and deletes cookies.
+    *   **Controls**: Manages wallet connection and preferences.t Server)
 
 ### System Context Diagram
 

@@ -31,21 +31,26 @@ MyTerms introduces the **Privacy Proverb**—a cryptographic proof of intent. Th
 *   **Privacy Proverb:** A hash representing the user's specific consent profile (e.g., "Tracking Disallowed", "Analytics Allowed").
 *   **Policy Publishing:** Websites can publish their Terms of Service (P7012 Standard) to the chain, creating an immutable reference.
 *   **Decentralized Verification:**
-    *   **User:** Generates a shielded transaction containing their Proverb.
-    *   **Website:** Verifies the Proverb against their published policy hash to grant access or adjust site behavior.
+# Executive Brief: ConsentChain (v2.0-alpha.1)
 
----
+**Status**: Alpha Release (Feature Frozen)
+**Date**: February 2026
+**Branch**: `alpha`
 
-## 3. Hybrid Architecture (Consent-O-Matic Integration)
-**New in V2.0:** Integrated the "Consent-O-Matic" detection engine.
+## 🎯 Executive Summary
+ConsentChain (formerly MyTerms) has reached the **Alpha Release** milestone. This version introduces the **Hybrid Detection Engine**, combining Consent-O-Matic's rule-based precision with our custom heuristics, enabling support for 200+ Consent Management Platforms (CMPs).
 
-### Overview
-To maximize coverage, we have moved to a hybrid architecture that combines our bespoke semantic heuristics with the open-source Consent-O-Matic rule library.
+## 📊 Key Metrics
+*   **CMP Support**: ~200 Providers (OneTrust, Quantcast, Cookiebot, etc.)
+*   **Detection Speed**: < 500ms on average.
+*   **Blockchain Integration**:
+    *   **Zcash**: Inscription Simulation (Mocks ready for integration).
+    *   **Ethereum**: Sepolia Testnet Registry (Mock Contract).
 
-### Key Capabilities
-*   **200+ Supported CMPs:** Native support for OneTrust, Cookiebot, TrustArc, and hundreds of others.
-*   **Deterministic Detection:** Uses specific CSS selectors for 100% accurate identification of known banners.
-*   **Semantic Fallback:** If a rule is not found, the legacy AI-driven heuristic takes over (the "Dual-Chain" logic).
+## 🛣️ Roadmap
+1.  **Alpha (Current)**: Remote Deployment & "Fresh Install" Verification.
+2.  **Beta**: Enable Real Zcash Inscriptions & Mainnet Contracts.
+3.  **V2.0 Launch**: Chrome Web Store Release.
 
 ---
 

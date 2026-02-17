@@ -1,20 +1,22 @@
-# ConsentChain V2.0 - Blockchain-Backed Consent Automation
+# ConsentChain (Alpha)
 
-> **Replace cookie banners with cryptographically verifiable, user-sovereign consent contracts.**
+![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![Version](https://img.shields.io/badge/version-v2.0--alpha.1-orange.svg)
+![Status](https://img.shields.io/badge/status-active-success.svg)
 
-![ConsentChain Logo](extension/icons/icon128.png)
+**Your Privacy, On-Chain.**
 
-## Overview
+ConsentChain (formerly MyTerms) is a Web3-powered browser extension that automates your cookie consent preferences and secures your choices on the blockchain.
 
-**ConsentChain** (formerly MyTerms) is a browser extension that automates your interactions with cookie consent banners (CMPs) and anchors your decisions to the blockchain.
+> **Current Release**: `v2.0-alpha.1` (Branch: `alpha`)
+> **Core Features**: Hybrid Detection (Consent-O-Matic + Heuristics), Zcash Inscriptions (Mock), Ethereum Registry (Sepolia).
 
-**New in V2.0:** We have integrated the powerful **Consent-O-Matic** rule engine, instantly expanding support to widely used CMPs like OneTrust, Cookiebot, Quantcast, and 200+ others.
+## 🚀 Key Features
 
-### Why ConsentChain?
-1.  **Zero Banner Fatigue**: Automatically handles popups based on your preferences.
-2.  **Verifiable Truth**: Every consent decision is hashed and batched to a smart contract (`MyTermsConsentLedger`).
-3.  **Privacy Proverb**: A cryptographic proof of your intent, allowing for "don't ask me again" portability.
-4.  **Cookie Monster**: Analyzes and eats tracking cookies that violate your terms.
+*   **🛡️ Automated Protection**: Instantly detects and handles 200+ CMP types (OneTrust, Quantcast, Cookiebot, etc.).
+*   **🍪 Cookie Monster**: Visualize and delete tracking cookies directly from the dashboard.
+*   **🔗 Blockchain Verified**: Inscribes a privacy "Proverb" to Zcash (Shielded) and registers the commitment on Ethereum.
+*   **📊 Transparency Dashboard**: Track every consent decision with cryptographic proof.
 
 ---
 

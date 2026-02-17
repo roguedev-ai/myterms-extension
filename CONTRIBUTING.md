@@ -1,6 +1,25 @@
 # Contributing to ConsentChain
 
-We welcome contributions from the community! Whether you're a developer adding support for a new CMP or a privacy advocate improving our documentation, your help is appreciated.
+We welcome contributions to the ConsentChain project!
+
+## Development Status
+
+The project is currently in **Alpha Release** (`v2.0-alpha.1`).
+-   **Stable Branch**: `alpha` (Feature Frozen, Bug Fixes Only).
+-   **Development Branch**: `main` (New Features).
+
+## Getting Started
+
+1.  Fork the repository.
+2.  Clone your fork: `git clone https://github.com/your-username/myterms-extension.git`
+3.  Install dependencies: `npm install`
+4.  Switch to the appropriate branch.
+
+## Pull Request Process
+
+1.  Create a feature branch: `git checkout -b feature/my-feature`
+2.  Commit your changes.
+3.  Push to your fork and submit a PR to `main` (for features) or `alpha` (for critical bug fixes).
 
 ## How to Add a New CMP Rule
 
