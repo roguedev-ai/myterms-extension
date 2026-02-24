@@ -18,10 +18,8 @@ class MyTermsEthers {
   async initialize() {
     console.log('MyTermsEthers: Initializing with multi-wallet support...');
 
-    // Only initialize wallet manager in browser contexts (not service workers)
-    if (typeof window !== 'undefined' && walletManager.init) {
-      await walletManager.init();
-    }
+    // Wallet manager initializes itself when the singleton is created in browser contexts
+    // so we don't need to call it again here.
 
     await this.loadContractConfig();
     await this.initializeContract();

@@ -175,6 +175,15 @@ class WalletManager {
     }
 
     try {
+      // Probe to check if provider is responsive/context is valid before requesting accounts
+      try {
+        await window.ethereum.request({ method: 'eth_chainId' });
+      } catch (probeError) {
+        if (probeError.message && (probeError.message.includes('Extension context invalidated') || probeError.message.includes('not found'))) {
+          throw new Error('MetaMask context is invalid. Please refresh the page or restart your browser.');
+        }
+      }
+
       const accounts = await window.ethereum.request({
         method: 'eth_requestAccounts'
       });
@@ -324,6 +333,21 @@ class WalletManager {
 
       if (savedPreference && this.wallets[savedPreference]) {
         console.log(`Attempting to restore ${savedPreference} connection...`);
+
+        // Lightweight probe to verify window.ethereum is responsive before full restore
+        if (savedPreference === 'metamask' && window.ethereum) {
+          try {
+            // Race a simple request against a short timeout
+            await Promise.race([
+              window.ethereum.request({ method: 'eth_accounts' }),
+              new Promise((_, reject) => setTimeout(() => reject(new Error('Probe timeout')), 2000))
+            ]);
+          } catch (probeError) {
+            console.log('Provider probe failed, aborting restore:', probeError.message);
+            return;
+          }
+        }
+
         await this.connectWallet(savedPreference, { silent: true });
       }
     } catch (error) {
