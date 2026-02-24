@@ -581,6 +581,15 @@ class DashboardApp {
         // Preferences
         this.savePreferencesBtn.addEventListener('click', () => this.savePreferences());
 
+        // Error Modal Close
+        const errorModalClose = document.getElementById('errorModalClose');
+        if (errorModalClose) {
+            errorModalClose.addEventListener('click', () => {
+                const modal = document.getElementById('errorModal');
+                if (modal) modal.classList.add('hidden');
+            });
+        }
+
         // Clear Data (Error Modal)
         const clearBtn = document.getElementById('clearDataBtn');
         if (clearBtn) {
