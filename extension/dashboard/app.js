@@ -229,6 +229,8 @@ class DashboardApp {
         console.log('DashboardApp v1.1 initialized');
         this.dataService = new DataService();
         this.consents = []; // Initialize empty array
+        this.limit = 50;
+        this.offset = 0;
 
         // Fail-safe: Force hide overlay if init takes too long (e.g., wallet/provider hanging)
         this.initTimeout = setTimeout(() => {
@@ -906,12 +908,10 @@ class DashboardApp {
             this.loadMoreBtn.classList.add('loading');
             this.loadMoreBtn.textContent = 'Loading...';
 
-            // Calculate current offset based on displayed items
-            const currentCount = document.querySelectorAll('.timeline-item').length;
-
-            const data = await this.dataService.getConsentData(50, currentCount);
+            const data = await this.dataService.getConsentData(this.limit, this.offset);
 
             if (data.consents && data.consents.length > 0) {
+                this.offset += data.consents.length;
                 this.renderTimeline(data.consents, true); // true = append
             } else {
                 this.loadMoreBtn.textContent = 'No more events';
@@ -994,6 +994,7 @@ class DashboardApp {
     async loadData() {
         try {
             this.showLoading(true);
+            this.offset = 0; // Reset offset on fresh load
 
             // Fetch paginated consents for timeline
             const data = await this.dataService.getConsentData(this.limit, this.offset);
@@ -1001,7 +1002,8 @@ class DashboardApp {
             // Safety check for data.consents
             const newConsents = data.consents || [];
 
-            this.consents = this.offset === 0 ? newConsents : [...this.consents, ...newConsents];
+            this.consents = newConsents;
+            this.offset += newConsents.length;
 
             // Fetch aggregated sites data for charts and sites view
             const sitesData = await this.dataService.getAllSitesData();
