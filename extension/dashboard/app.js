@@ -253,6 +253,10 @@ class DashboardApp {
             // Check if we're in extension context (chrome-extension://)
             const isExtensionContext = window.location.protocol === 'chrome-extension:';
 
+            // Initialize charts before wallet listeners so updateCharts() is safe
+            // if onWalletChange fires during the loadPreferences() delay.
+            this.initCharts();
+
             if (isExtensionContext) {
                 // Hide wallet-dependent features in extension context
                 this.disableWalletFeatures();
@@ -277,9 +281,6 @@ class DashboardApp {
                     this.updateWalletUI(null);
                 }
             }
-
-            // Initialize charts
-            this.initCharts();
 
             // Load initial data
             await this.loadData();
