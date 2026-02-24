@@ -229,6 +229,8 @@ class DashboardApp {
         console.log('DashboardApp v1.1 initialized');
         this.dataService = new DataService();
         this.consents = []; // Initialize empty array
+        this.limit = 50;
+        this.offset = 0;
 
         // Fail-safe: Force hide overlay if init takes too long (e.g., wallet/provider hanging)
         this.initTimeout = setTimeout(() => {
@@ -531,6 +533,7 @@ class DashboardApp {
             sites: document.getElementById('sitesView'),
             agreements: document.getElementById('agreementsView'),
             analytics: document.getElementById('analyticsView'),
+            analysis: document.getElementById('analysisView'),
             preferences: document.getElementById('preferencesView')
         };
 
@@ -644,6 +647,11 @@ class DashboardApp {
                     const { url, name, storeid } = btn.dataset;
                     this.deleteSingleCookie(url, name, storeid, btn);
                 }
+
+                // Handle Copy Proof (replaces inline onclick to satisfy CSP)
+                if (e.target.classList.contains('copy-proof-btn')) {
+                    navigator.clipboard.writeText(e.target.dataset.hash);
+                }
             });
         }
     }
@@ -721,18 +729,32 @@ class DashboardApp {
     }
 
     async loadPreferences() {
+        const applyPrefs = (prefs) => {
+            if (!prefs) return;
+            if (this.prefs.denyAll) this.prefs.denyAll.checked = prefs.denyAll || false;
+            if (this.prefs.analytics) this.prefs.analytics.checked = prefs.analytics || false;
+            if (this.prefs.marketing) this.prefs.marketing.checked = prefs.marketing || false;
+            if (this.prefs.functional) this.prefs.functional.checked = prefs.functional || false;
+            if (this.prefs.social) this.prefs.social.checked = prefs.social || false;
+            if (this.prefs.blockchainEnabled) this.prefs.blockchainEnabled.checked = prefs.blockchainEnabled || false;
+        };
+
         try {
             const prefs = await this.dataService.getPreferences();
-            if (prefs) {
-                this.prefs.denyAll.checked = prefs.denyAll;
-                this.prefs.analytics.checked = prefs.analytics;
-                this.prefs.marketing.checked = prefs.marketing;
-                this.prefs.functional.checked = prefs.functional;
-                this.prefs.social.checked = prefs.social;
-                this.prefs.blockchainEnabled.checked = prefs.blockchainEnabled || false;
-            }
+            applyPrefs(prefs);
         } catch (error) {
-            console.error('Failed to load preferences:', error);
+            // In bridge mode the content-script bridge may not be ready yet on first load.
+            // Retry once after a short delay to give the bridge time to register.
+            console.warn('loadPreferences: first attempt failed, retrying in 1.5s...', error.message);
+            setTimeout(async () => {
+                try {
+                    const prefs = await this.dataService.getPreferences();
+                    applyPrefs(prefs);
+                    console.log('loadPreferences: retry succeeded');
+                } catch (retryErr) {
+                    console.error('loadPreferences: retry also failed:', retryErr);
+                }
+            }, 1500);
         }
     }
 
@@ -1014,6 +1036,7 @@ class DashboardApp {
             }
 
             this.renderTimeline(this.consents, this.offset > 0);
+            this.renderTimelineChart(this.consents);
             this.renderSites(sitesData); // Use full sites data
             this.updateCharts(sitesData); // Use full sites data
 
@@ -1061,6 +1084,7 @@ class DashboardApp {
 
         // Update sections
         Object.entries(this.views).forEach(([name, el]) => {
+            if (!el) return;
             if (name === viewName) el.classList.remove('hidden');
             else el.classList.add('hidden');
         });
@@ -1405,7 +1429,7 @@ class DashboardApp {
                                 🍪 Cookies
                             </button>
                             ${consent.termsHash ? `
-                            <button class="action-btn-sm" onclick="navigator.clipboard.writeText('${consent.termsHash}')">
+                            <button class="action-btn-sm copy-proof-btn" data-hash="${consent.termsHash}">
                                 📋 Copy Proof
                             </button>` : ''}
                         </div>
@@ -1692,13 +1716,15 @@ class AnalysisController {
                         stats.Unknown
                     ],
                     backgroundColor: [
-                        '#059669', // Security (Green)
-                        '#2563eb', // Functional (Blue)
-                        '#d97706', // Analytics (Amber)
-                        '#dc2626', // Marketing (Red)
-                        '#4b5563'  // Unknown (Gray)
+                        '#10b981', // Security  — emerald green
+                        '#3b82f6', // Functional — bright blue
+                        '#f59e0b', // Analytics  — amber (warm, distinct from green)
+                        '#ef4444', // Marketing  — red (danger)
+                        '#94a3b8'  // Unknown    — slate (neutral, readable)
                     ],
-                    borderWidth: 0
+                    borderColor: '#ffffff',
+                    borderWidth: 3,
+                    hoverOffset: 6
                 }]
             },
             options: {
@@ -1707,7 +1733,23 @@ class AnalysisController {
                 plugins: {
                     legend: {
                         position: 'right',
-                        labels: { color: '#d1d5db' }
+                        labels: {
+                            color: '#374151',       // dark text for light background
+                            padding: 14,
+                            usePointStyle: true,
+                            pointStyleWidth: 10,
+                            font: { size: 13 }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleColor: '#f1f5f9',
+                        bodyColor: '#cbd5e1',
+                        borderColor: '#334155',
+                        borderWidth: 1,
+                        callbacks: {
+                            label: (ctx) => ` ${ctx.label}: ${ctx.parsed} cookie${ctx.parsed !== 1 ? 's' : ''}`
+                        }
                     }
                 }
             }
@@ -1727,24 +1769,23 @@ class AnalysisController {
         };
 
         tbody.innerHTML = cookies.map(c => `
-            <tr style="border-bottom: 1px solid #374151;">
-                <td style="padding: 10px 15px; word-break: break-all; color: #e5e7eb;">${c.name}</td>
-                <td style="padding: 10px 15px; color: #9ca3af;">${c.domain}</td>
+            <tr style="border-bottom: 1px solid #e5e7eb;">
+                <td style="padding: 10px 15px; word-break: break-all; color: #111827; font-size: 0.85rem;">${c.name}</td>
+                <td style="padding: 10px 15px; color: #4b5563; font-size: 0.85rem;">${c.domain}</td>
                 <td style="padding: 10px 15px;">
-                     <span style="background: ${categoryColors[c.category] || '#4b5563'}; color: white; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem;">
+                    <span style="background: ${categoryColors[c.category] || '#94a3b8'}; color: white; padding: 2px 10px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.3px;">
                         ${c.category}
                     </span>
                 </td>
-                <td style="padding: 10px 15px; text-align: center;">${c.secure ? '🔒' : ''}</td>
+                <td style="padding: 10px 15px; text-align: center;">${c.secure ? '🔒' : '—'}</td>
             </tr>
         `).join('');
     }
 
     getScoreColor(score) {
-        if (score >= 80) return '#4ade80'; // Green
-        if (score >= 50) return '#facc15'; // Yellow
-        // For the purple card background, white is better than red text, but let's stick to logic
-        return 'white';
+        if (score >= 80) return '#059669'; // Dark green — readable on light bg
+        if (score >= 50) return '#d97706'; // Amber
+        return '#dc2626'; // Red
     }
 
     async eatCookies() {

@@ -25,11 +25,9 @@ const mimeTypes = {
 };
 
 const server = http.createServer((req, res) => {
-    // Parse URL
-    let reqUrl = req.url === '/' ? '/index.html' : req.url;
-
-    // Remove query parameters
-    reqUrl = reqUrl.split('?')[0];
+    // Parse URL — strip query params first, then handle root
+    let reqUrl = req.url.split('?')[0];
+    if (reqUrl === '/') reqUrl = '/index.html';
 
     let filePath;
 

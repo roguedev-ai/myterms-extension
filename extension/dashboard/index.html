@@ -4,25 +4,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ConsentChain Dashboard</title>
+    <title>MyTerms Consent Dashboard</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="../libs/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 
 <body>
     <div class="app-container">
-        <aside class="sidebar">
-            <div class="logo-area">
-                <img src="../icons/icon128.png" alt="ConsentChain Logo" class="logo-img">
-                <h1>ConsentChain</h1>
-            </div>
-            <div class="subtitle">Privacy Consent Ledger Dashboard</div>
-        </aside>
-
         <!-- Header -->
         <header class="header">
             <div class="header-content">
+                <div class="branding">
+                    <div class="logo">
+                        <div class="logo-icon">🛡️</div>
+                        <h1>MyTerms</h1>
+                    </div>
+                    <div class="subtitle">Privacy Consent Ledger Dashboard</div>
+                </div>
                 <div class="wallet-status" id="walletStatus" style="display: flex; align-items: center; gap: 10px;">
                     <button class="connect-btn" id="forceBatchButton" style="background: rgba(255, 255, 255, 0.1);">
                         ⚡ Force Batch
@@ -86,8 +85,8 @@
                     <div class="view-controls">
                         <button class="view-btn active" data-view="timeline">📅 Timeline</button>
                         <button class="view-btn" data-view="sites">🌐 Sites</button>
-                        <button class="view-btn" data-view="agreements">📜 Agreements</button>
                         <button class="view-btn" data-view="analytics">📈 Analytics</button>
+                        <button class="view-btn" data-view="analysis">🍪 Cookies</button>
                         <button class="view-btn" data-view="preferences">⚙️ Preferences</button>
                     </div>
                 </div>
@@ -130,30 +129,20 @@
             <!-- Sites View -->
             <section class="sites-section hidden" id="sitesView">
                 <h2>Sites Overview</h2>
-                <div class="sites-header">
-                    <div class="sites-header-label">Website</div>
-                    <div class="sites-header-label">Consent Exceptions</div>
-                    <div class="sites-header-label">Last Updated</div>
-                </div>
                 <div class="sites-grid" id="sitesGrid">
                     <!-- Sites will be populated here -->
                 </div>
             </section>
 
-            <!-- Agreements View -->
+            <!-- Agreements View (hidden, accessed programmatically) -->
             <section class="agreements-section hidden" id="agreementsView">
-                <h2>Consent Agreements</h2>
-                <div class="agreements-header">
-                    <p class="section-description">
-                        View the full text of terms and conditions you have encountered.
-                    </p>
-                </div>
-                <div class="agreements-list" id="agreementsList">
-                    <!-- Agreements populated via JS -->
-                    <div class="loading-spinner">Loading agreements...</div>
+                <h2>Captured Agreements</h2>
+                <div id="agreementsList">
+                    <!-- Agreements populated by app.js -->
                 </div>
             </section>
 
+            <!-- Analytics View -->
             <section class="analytics-section hidden" id="analyticsView">
                 <h2>Privacy Analytics</h2>
                 <div class="analytics-grid" id="analyticsGrid">
@@ -166,79 +155,60 @@
                         <canvas id="sitesChart"></canvas>
                     </div>
                 </div>
+            </section>
 
-                <hr style="margin: 40px 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-
-                <!-- Cookie Monster Section -->
-                <div class="cookie-monster-section">
-                    <div class="header-row"
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h3>Cookie Analysis & Cleanup</h3>
-                        <button id="refresh-analysis-btn" class="connect-btn" style="background: #2563eb;">
-                            🔍 Scan Cookies
-                        </button>
+            <!-- Cookie Analysis / Monster View -->
+            <section class="analysis-section hidden" id="analysisView">
+                <div class="analysis-header">
+                    <h2>Cookie Analysis</h2>
+                    <div class="analysis-controls">
+                        <button class="refresh-btn" id="refresh-analysis-btn">🔍 Scan Cookies</button>
                     </div>
+                </div>
 
-                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; margin-bottom: 30px;">
-                        <!-- Cookie Distribution Chart -->
-                        <div class="chart-container" style="height: 350px;">
-                            <h3>Cookie Composition</h3>
+                <!-- Score Row -->
+                <div class="analysis-score-row">
+                    <div class="analysis-score-card">
+                        <span id="privacy-score" class="score-number">--</span>
+                        <span class="score-label">Privacy Score</span>
+                        <p id="score-text" class="score-text">Click "Scan Cookies" to analyze.</p>
+                    </div>
+                    <div class="analysis-count-card">
+                        <span id="cookie-count" class="cookie-count-badge"></span>
+                        <button class="monster-btn" id="cookie-monster-btn" disabled>
+                            🍪 Cookie Monster <span>😴</span>
+                        </button>
+                        <span id="monster-status" class="monster-status"></span>
+                    </div>
+                </div>
+
+                <!-- Chart + Table -->
+                <div class="analysis-grid">
+                    <div class="chart-container analysis-chart-box">
+                        <h3>Cookie Categories</h3>
+                        <div class="cookie-chart-wrap">
                             <canvas id="cookieChart"></canvas>
                         </div>
-
-                        <!-- Score & Actions -->
-                        <div style="display: flex; flex-direction: column; gap: 20px;">
-                            <div class="stat-card"
-                                style="background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); text-align: center; padding: 30px;">
-                                <div style="font-size: 1.1rem; opacity: 0.9;">Privacy Score</div>
-                                <div id="privacy-score"
-                                    style="font-size: 4rem; font-weight: 800; line-height: 1.2; margin: 10px 0;">--
-                                </div>
-                                <div id="score-text" style="font-size: 0.9rem;">Ready to scan</div>
-                            </div>
-
-                            <div class="stat-card" style="text-align: center; border: 1px solid #374151;">
-                                <h4 style="margin-top: 0; color: #facc15;">Cookie Monster</h4>
-                                <p style="font-size: 0.85rem; color: #9ca3af; margin-bottom: 15px;">
-                                    Safe-delete all Analytics & Marketing cookies.
-                                </p>
-                                <button id="cookie-monster-btn" class="connect-btn"
-                                    style="background: #dc2626; width: 100%; justify-content: center;" disabled>
-                                    <span style="font-size: 1.2rem; margin-right: 8px;">🍪</span> Eat Cookies
-                                </button>
-                                <p id="monster-status" style="margin-top: 10px; font-size: 0.8em; min-height: 1.2em;">
-                                </p>
-                            </div>
-                        </div>
                     </div>
 
-                    <!-- Cookie Table -->
-                    <div class="sites-grid" style="grid-template-columns: 1fr;">
-                        <div class="table-container"
-                            style="background: rgba(31, 41, 55, 0.5); border-radius: 8px; overflow: hidden;">
-                            <div
-                                style="padding: 15px; border-bottom: 1px solid #374151; display: flex; justify-content: space-between; align-items: center;">
-                                <h4 style="margin: 0;">Detailed Cookie List</h4>
-                                <span id="cookie-count" style="color: #9ca3af; font-size: 0.9em;">0 loaded</span>
-                            </div>
-                            <div style="max-height: 400px; overflow-y: auto;">
-                                <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
-                                    <thead style="background: #1f2937; position: sticky; top: 0;">
-                                        <tr>
-                                            <th style="padding: 12px 15px; text-align: left; color: #9ca3af;">Name</th>
-                                            <th style="padding: 12px 15px; text-align: left; color: #9ca3af;">Domain
-                                            </th>
-                                            <th style="padding: 12px 15px; text-align: left; color: #9ca3af;">Category
-                                            </th>
-                                            <th style="padding: 12px 15px; text-align: center; color: #9ca3af;">Secure
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="cookie-table-body">
-                                        <!-- Populated via JS -->
-                                    </tbody>
-                                </table>
-                            </div>
+                    <div class="chart-container analysis-table-box">
+                        <h3>Cookie Details</h3>
+                        <div class="cookie-table-wrap">
+                            <table class="cookie-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Domain</th>
+                                        <th>Category</th>
+                                        <th>Secure</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cookie-table-body">
+                                    <tr>
+                                        <td colspan="4" class="cookie-table-empty">No scan run yet — click Scan Cookies above.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -329,15 +299,10 @@
                         </div>
                     </div>
 
-                    <hr style="margin: 30px 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-
-                    <h3 style="margin-bottom: 15px; font-size: 18px;">Blockchain Settings</h3>
-
                     <div class="preference-item">
                         <div class="pref-info">
-                            <h3>Enable Blockchain Features</h3>
-                            <p>Store consent data on the blockchain. Requires wallet connection via localhost dashboard.
-                            </p>
+                            <h3>Blockchain Recording</h3>
+                            <p>Automatically submit consent batches to the blockchain ledger.</p>
                         </div>
                         <div class="pref-control">
                             <label class="switch">
@@ -350,19 +315,6 @@
                     <div class="preference-actions">
                         <button class="save-btn" id="savePreferencesBtn">Save Preferences</button>
                         <span id="saveStatus" class="save-status"></span>
-                    </div>
-
-                    <hr style="margin: 30px 0; border: none; border-top: 1px solid rgba(255, 255, 255, 0.1);">
-
-                    <h3 style="margin-bottom: 15px; font-size: 18px; color: #ff6b6b;">Danger Zone</h3>
-                    <div class="preference-item">
-                        <div class="pref-info">
-                            <h3>Clear All Data</h3>
-                            <p>Permanently delete all consent history and reset stats.</p>
-                        </div>
-                        <div class="preference-actions">
-                            <button id="clearDataBtnMain" class="danger-btn">Clear All Data</button>
-                        </div>
                     </div>
                 </div>
             </section>
@@ -383,14 +335,6 @@
                     <h3>Error</h3>
                     <button class="modal-close" id="errorModalClose">✕</button>
                 </div>
-                <div class="preference-item">
-                    <label>Debug Tools</label>
-                    <div class="preference-actions">
-                        <button id="simulateConsentBtn" class="secondary-btn" style="margin-right: 10px;">Simulate
-                            Consent Event</button>
-                        <button id="clearDataBtn" class="danger-btn">Clear All Data</button>
-                    </div>
-                </div>
                 <div class="modal-body">
                     <p id="errorMessage">An error occurred while loading data.</p>
                 </div>
@@ -400,7 +344,7 @@
 
     <!-- External Libraries -->
     <script src="../libs/chart.js"></script>
-    <script type="module" src="app.js?v=1.1"></script>
+    <script type="module" src="app.js?v=1.2"></script>
 </body>
 
 </html>
