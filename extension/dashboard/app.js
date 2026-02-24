@@ -712,10 +712,11 @@ class DashboardApp {
             console.log('Wallet changed:', wallet);
             this.updateWalletUI(wallet);
             if (wallet) {
-                // Wallet just connected — initialize the ethers contract with the
-                // new signer. myTermsEthers.initializeContract() is a no-op if
-                // called before any wallet was ready, so we must call it here.
-                await myTermsEthers.initializeContract();
+                // Wallet just connected — full reset so ethers re-detects the
+                // current network and loads the correct contract address/ABI.
+                // initializeContract() alone is not enough because loadRemoteConfig()
+                // defaulted to 'sepolia' at startup (no wallet was connected then).
+                await myTermsEthers.reset();
                 this.loadData();
             } else {
                 this.clearBlockchainData();
@@ -892,8 +893,10 @@ class DashboardApp {
 
             if (btn) btn.textContent = '✍️ Signing...';
 
-            // 2. Submit to blockchain using dashboard's wallet connection
-            // We use myTermsEthers directly since we are in the dashboard context
+            // 2. Reset ethers to ensure contract address matches current network,
+            // then submit. reset() reloads config based on the live wallet network.
+            await myTermsEthers.reset();
+
             const txResult = await myTermsEthers.submitConsentBatch(
                 batchData.sites,
                 batchData.hashes
