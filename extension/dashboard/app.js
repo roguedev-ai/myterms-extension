@@ -708,11 +708,18 @@ class DashboardApp {
     }
 
     setupWalletListeners() {
-        walletManager.onWalletChange((wallet) => {
+        walletManager.onWalletChange(async (wallet) => {
             console.log('Wallet changed:', wallet);
             this.updateWalletUI(wallet);
-            if (wallet) this.loadData(); // Reload with blockchain data
-            else this.clearBlockchainData(); // Keep local data
+            if (wallet) {
+                // Wallet just connected — initialize the ethers contract with the
+                // new signer. myTermsEthers.initializeContract() is a no-op if
+                // called before any wallet was ready, so we must call it here.
+                await myTermsEthers.initializeContract();
+                this.loadData();
+            } else {
+                this.clearBlockchainData();
+            }
         });
     }
 
