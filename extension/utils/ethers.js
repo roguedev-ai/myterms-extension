@@ -207,15 +207,15 @@ class MyTermsEthers {
         }
       };
 
-      if (networks[network]) {
-        this.contractAddress = networks[network].address;
-        this.contractABI = networks[network].abi;
-      } else {
-        console.warn(`Network ${network} not supported, falling back to localhost`);
-        // Fallback to localhost if unknown (likely development)
-        this.contractAddress = networks['localhost'].address;
-        this.contractABI = networks['localhost'].abi;
+      if (network !== 'sepolia' && network !== 'localhost') {
+        console.error(`Network ${network} is not supported. Please switch to Sepolia or Localhost.`);
+        this.contractAddress = null;
+        this.contractABI = [];
+        return;
       }
+
+      this.contractAddress = networks[network].address;
+      this.contractABI = networks[network].abi;
     } catch (error) {
       console.error('Failed to load remote config:', error);
       // Fallback to default values
@@ -298,7 +298,7 @@ class MyTermsEthers {
       if (!this.contract) {
         console.log('Contract object is null, attempting initialization...');
         await this.initializeContract();
-        if (!this.contract) throw new Error('Failed to initialize contract');
+        if (!this.contract) throw new Error('Failed to initialize contract. Please ensure you are connected to a supported network (Sepolia or Localhost).');
       }
 
       // Check if function exists
@@ -325,9 +325,7 @@ class MyTermsEthers {
         if (method.estimateGas) {
           gasEstimate = await method.estimateGas(siteDomains, termsHashes);
         } else {
-          // Fallback for older ethers versions or proxies
-          console.warn('method.estimateGas missing, trying contract.estimateGas.logConsentBatch');
-          gasEstimate = await this.contract.estimateGas.logConsentBatch(siteDomains, termsHashes);
+          throw new Error('method.estimateGas not available');
         }
       } catch (e) {
         console.warn('Gas estimation failed, using fallback:', e);

@@ -20,8 +20,8 @@ class WalletManager {
 
     this.connectedWallet = null;
     this._onWalletChangeCallback = null;
-    this.onAccountChange = null;
-    this.onNetworkChange = null;
+    this._onAccountChangeCallback = null;
+    this._onNetworkChangeCallback = null;
 
     // Only initialize wallet detection in browser contexts (not service workers)
     if (typeof window !== 'undefined') {
@@ -50,8 +50,8 @@ class WalletManager {
     // Check for MetaMask
     this.wallets.metamask = this.isMetaMaskInstalled();
 
-    // Check for WalletConnect (always available as fallback)
-    this.wallets.walletconnect = true;
+    // Check for WalletConnect (disabled until fully implemented)
+    this.wallets.walletconnect = false;
 
     // Check for Trust Wallet
     this.wallets.trustWallet = this.isTrustWalletInstalled();
@@ -367,8 +367,8 @@ class WalletManager {
       if (this.connectedWallet) {
         this.connectedWallet.account = accounts[0] || null;
 
-        if (this.onAccountChange) {
-          this.onAccountChange(this.connectedWallet.account);
+        if (this._onAccountChangeCallback) {
+          this._onAccountChangeCallback(this.connectedWallet.account);
         }
       }
     });
@@ -382,8 +382,8 @@ class WalletManager {
           chainId: network.chainId
         };
 
-        if (this.onNetworkChange) {
-          this.onNetworkChange(this.connectedWallet.network);
+        if (this._onNetworkChangeCallback) {
+          this._onNetworkChangeCallback(this.connectedWallet.network);
         }
       }
     });
@@ -488,11 +488,11 @@ class WalletManager {
   }
 
   onAccountChange(callback) {
-    this.onAccountChange = callback;
+    this._onAccountChangeCallback = callback;
   }
 
   onNetworkChange(callback) {
-    this.onNetworkChange = callback;
+    this._onNetworkChangeCallback = callback;
   }
 
   // Get wallet availability status

@@ -354,8 +354,8 @@ class DashboardApp {
             const chainId = wallet?.network?.chainId ? Number(wallet.network.chainId) : 0;
             console.log('Detected Chain ID:', chainId, 'Wallet Network:', wallet?.network);
 
-            if (chainId === 1) {
-                throw new Error(`Please switch your wallet to Localhost (Chain ID: 31337) or Sepolia (Chain ID: 11155111). Detected Chain ID: ${chainId} (Mainnet).`);
+            if (chainId !== 31337 && chainId !== 11155111 && chainId !== 1337) {
+                throw new Error(`Please switch your wallet to Localhost (Chain ID: 31337/1337) or Sepolia (Chain ID: 11155111). Detected Chain ID: ${chainId} (${wallet?.network?.name || 'Unknown'}).`);
             }
 
             statusMsg.textContent = 'Preparing batch data...';

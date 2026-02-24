@@ -292,9 +292,6 @@ class ConsentManager {
       iconUrl: 'icons/icon128.png',
       title: 'MyTerms Batch Submitted',
       message: `Successfully logged ${consentCount} consents to blockchain. Transaction: ${txResult.hash.substring(0, 10)}...`,
-      buttons: [{
-        title: 'View Transaction'
-      }],
       requireInteraction: false
     });
   }

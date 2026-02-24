@@ -10,7 +10,7 @@ const AGREEMENT_STORE = 'agreementText';
 class ConsentStorage {
   constructor() {
     this.db = null;
-    this.initDB();
+    this.initPromise = this.initDB();
   }
 
   async initDB() {
@@ -68,18 +68,7 @@ class ConsentStorage {
 
   async waitForDB() {
     if (this.db) return this.db;
-
-    let attempts = 0;
-    while (!this.db && attempts < 10) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      attempts++;
-    }
-
-    if (!this.db) {
-      throw new Error('Database not initialized');
-    }
-
-    return this.db;
+    return this.initPromise;
   }
 
   // Add consent to queue
@@ -263,7 +252,7 @@ class ConsentStorage {
           const cursor = event.target.result;
           if (cursor) {
             const item = cursor.value;
-            console.log(`[BatchDebug] Item ${item.id}: batched=${item.batched}, ts=${item.timestamp}, threshold=${thresholdTime}, include=${!item.batched && item.timestamp <= thresholdTime}`);
+            // console.log(`[BatchDebug] Item ${item.id}: batched=${item.batched}, ts=${item.timestamp}, threshold=${thresholdTime}, include=${!item.batched && item.timestamp <= thresholdTime}`);
             if (!item.batched && item.timestamp <= thresholdTime) {
               results.push(item);
             }
@@ -284,36 +273,49 @@ class ConsentStorage {
 
   // Mark consents as batched
   async markAsBatched(consentIds, batchInfo) {
+    if (!consentIds || consentIds.length === 0) return;
+
     try {
       const db = await this.waitForDB();
-      const transaction = db.transaction([CONSENT_STORE], 'readwrite');
-      const store = transaction.objectStore(CONSENT_STORE);
-
-      for (const id of consentIds) {
-        const request = store.get(id);
-
-        request.onsuccess = () => {
-          const consent = request.result;
-          if (consent) {
-            consent.batched = true;
-            consent.batchedAt = Date.now();
-            consent.batchId = batchInfo.batchId;
-
-            const updateRequest = store.put(consent);
-            updateRequest.onerror = (event) => {
-              console.error('Error updating consent:', event.target.error);
-            };
-          }
-        };
-
-        request.onerror = (event) => {
-          console.error('Error getting consent for update:', event.target.error);
-        };
-      }
 
       return new Promise((resolve, reject) => {
+        const transaction = db.transaction([CONSENT_STORE], 'readwrite');
+        const store = transaction.objectStore(CONSENT_STORE);
+
         transaction.oncomplete = () => resolve();
         transaction.onerror = (event) => reject(event.target.error);
+
+        // Process sequentially to keep transaction alive
+        const processNext = (index) => {
+          if (index >= consentIds.length) return; // Finish, oncomplete will fire
+
+          const request = store.get(consentIds[index]);
+
+          request.onsuccess = () => {
+            const consent = request.result;
+            if (consent) {
+              consent.batched = true;
+              consent.batchedAt = Date.now();
+              consent.batchId = batchInfo.batchId;
+
+              const updateRequest = store.put(consent);
+              updateRequest.onsuccess = () => processNext(index + 1);
+              updateRequest.onerror = (event) => {
+                console.error('Error updating consent:', event.target.error);
+                processNext(index + 1); // continue despite error
+              };
+            } else {
+              processNext(index + 1);
+            }
+          };
+
+          request.onerror = (event) => {
+            console.error('Error getting consent for update:', event.target.error);
+            processNext(index + 1);
+          };
+        };
+
+        processNext(0);
       });
     } catch (error) {
       console.error('Error marking consents as batched:', error);
