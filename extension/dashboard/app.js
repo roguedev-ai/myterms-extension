@@ -575,6 +575,18 @@ class DashboardApp {
             btn.addEventListener('click', (e) => this.switchView(e.target.dataset.view));
         });
 
+        // Event delegation for copy-proof-btn to avoid inline onclick CSP violation
+        document.body.addEventListener('click', (e) => {
+            const copyBtn = e.target.closest('.copy-proof-btn');
+            if (copyBtn && copyBtn.dataset.hash) {
+                navigator.clipboard.writeText(copyBtn.dataset.hash).then(() => {
+                    const originalText = copyBtn.innerHTML;
+                    copyBtn.innerHTML = '✅ Copied!';
+                    setTimeout(() => copyBtn.innerHTML = originalText, 2000);
+                }).catch(err => console.error('Clipboard write failed:', err));
+            }
+        });
+
         // Refresh
         this.refreshBtn.addEventListener('click', () => this.loadData());
         this.retryBtn.addEventListener('click', () => this.loadData());
@@ -1068,6 +1080,7 @@ class DashboardApp {
 
         // Update sections
         Object.entries(this.views).forEach(([name, el]) => {
+            if (!el) return;
             if (name === viewName) el.classList.remove('hidden');
             else el.classList.add('hidden');
         });
@@ -1412,7 +1425,7 @@ class DashboardApp {
                                 🍪 Cookies
                             </button>
                             ${consent.termsHash ? `
-                            <button class="action-btn-sm" onclick="navigator.clipboard.writeText('${consent.termsHash}')">
+                            <button class="action-btn-sm copy-proof-btn" data-hash="${consent.termsHash}">
                                 📋 Copy Proof
                             </button>` : ''}
                         </div>
@@ -1699,13 +1712,14 @@ class AnalysisController {
                         stats.Unknown
                     ],
                     backgroundColor: [
-                        '#059669', // Security (Green)
-                        '#2563eb', // Functional (Blue)
-                        '#d97706', // Analytics (Amber)
-                        '#dc2626', // Marketing (Red)
-                        '#4b5563'  // Unknown (Gray)
+                        '#10b981', // Security (Green)
+                        '#3b82f6', // Functional (Blue)
+                        '#f59e0b', // Analytics (Amber)
+                        '#ef4444', // Marketing (Red)
+                        '#64748b'  // Unknown (Gray)
                     ],
-                    borderWidth: 0
+                    borderWidth: 1,
+                    borderColor: '#ffffff'
                 }]
             },
             options: {
@@ -1714,7 +1728,14 @@ class AnalysisController {
                 plugins: {
                     legend: {
                         position: 'right',
-                        labels: { color: '#d1d5db' }
+                        labels: { color: '#334155', font: { weight: '500' } }
+                    },
+                    tooltip: {
+                        backgroundColor: '#1e293b',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#cbd5e1',
+                        borderColor: '#334155',
+                        borderWidth: 1
                     }
                 }
             }
@@ -1726,19 +1747,19 @@ class AnalysisController {
         if (!tbody) return;
 
         const categoryColors = {
-            'Security': '#059669',
-            'Analytics': '#d97706',
-            'Marketing': '#dc2626',
-            'Functional': '#2563eb',
-            'Unknown': '#4b5563'
+            'Security': '#10b981',
+            'Analytics': '#f59e0b',
+            'Marketing': '#ef4444',
+            'Functional': '#3b82f6',
+            'Unknown': '#64748b'
         };
 
         tbody.innerHTML = cookies.map(c => `
-            <tr style="border-bottom: 1px solid #374151;">
-                <td style="padding: 10px 15px; word-break: break-all; color: #e5e7eb;">${c.name}</td>
-                <td style="padding: 10px 15px; color: #9ca3af;">${c.domain}</td>
+            <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px 15px; word-break: break-all; color: #1e293b; font-weight: 500;">${c.name}</td>
+                <td style="padding: 10px 15px; color: #64748b;">${c.domain}</td>
                 <td style="padding: 10px 15px;">
-                     <span style="background: ${categoryColors[c.category] || '#4b5563'}; color: white; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem;">
+                     <span style="background: ${categoryColors[c.category] || '#64748b'}20; color: ${categoryColors[c.category] || '#64748b'}; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 600;">
                         ${c.category}
                     </span>
                 </td>
@@ -1748,10 +1769,9 @@ class AnalysisController {
     }
 
     getScoreColor(score) {
-        if (score >= 80) return '#4ade80'; // Green
-        if (score >= 50) return '#facc15'; // Yellow
-        // For the purple card background, white is better than red text, but let's stick to logic
-        return 'white';
+        if (score >= 80) return '#10b981'; // Green
+        if (score >= 50) return '#f59e0b'; // Amber
+        return '#dc2626'; // Red
     }
 
     async eatCookies() {
