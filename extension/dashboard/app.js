@@ -320,11 +320,11 @@ class DashboardApp {
             window.history.replaceState({}, document.title, window.location.pathname);
 
             // Wait a bit for UI to load
-            setTimeout(() => this.handleForceBatchAction(), 500);
+            setTimeout(() => this.handleForceBatchUrl(), 500);
         }
     }
 
-    async handleForceBatchAction() {
+    async handleForceBatchUrl() {
         try {
             console.log('Handling force batch action...');
 
@@ -462,8 +462,8 @@ class DashboardApp {
     }
 
     async skipBlockchainSubmission() {
+        const overlay = document.getElementById('loadingOverlay');
         try {
-            const overlay = document.getElementById('loadingOverlay');
             overlay.classList.remove('hidden');
             const statusMsg = document.getElementById('batchStatusMsg');
             statusMsg.textContent = 'Skipping blockchain... Finalizing batch locally.';
@@ -568,7 +568,7 @@ class DashboardApp {
     attachEventListeners() {
         // Wallet Connection
         this.connectBtn.addEventListener('click', () => this.connectWallet());
-        this.forceBatchBtn.addEventListener('click', () => this.handleForceBatchAction());
+        this.forceBatchBtn.addEventListener('click', () => this.handleForceBatchButton());
 
         // Navigation
         this.viewBtns.forEach(btn => {
@@ -702,11 +702,15 @@ class DashboardApp {
     }
 
     setupWalletListeners() {
-        walletManager.onWalletChange((wallet) => {
+        walletManager.onWalletChange(async (wallet) => {
             console.log('Wallet changed:', wallet);
             this.updateWalletUI(wallet);
-            if (wallet) this.loadData(); // Reload with blockchain data
-            else this.clearBlockchainData(); // Keep local data
+            if (wallet) {
+                await myTermsEthers.reset();
+                this.loadData(); // Reload with blockchain data
+            } else {
+                this.clearBlockchainData(); // Keep local data
+            }
         });
     }
 
@@ -831,7 +835,7 @@ class DashboardApp {
         }
     }
 
-    async handleForceBatchAction() {
+    async handleForceBatchButton() {
         try {
             if (!confirm('This will bundle all pending consents and submit them to the blockchain. Continue?')) {
                 return;
@@ -865,8 +869,9 @@ class DashboardApp {
 
             if (btn) btn.textContent = '✍️ Signing...';
 
+            await myTermsEthers.reset(); // R1 FIX
+
             // 2. Submit to blockchain using dashboard's wallet connection
-            // We use myTermsEthers directly since we are in the dashboard context
             const txResult = await myTermsEthers.submitConsentBatch(
                 batchData.sites,
                 batchData.hashes
@@ -963,7 +968,7 @@ class DashboardApp {
                 </div>
             `;
             // Re-attach listener for force batch
-            document.getElementById('forceBatchButton').addEventListener('click', () => this.handleForceBatchAction());
+            document.getElementById('forceBatchButton').addEventListener('click', () => this.handleForceBatchButton());
 
             if (this.connectBtn) this.connectBtn.style.display = 'none';
         } else {
@@ -978,7 +983,7 @@ class DashboardApp {
             `;
             // Re-attach listeners since we replaced innerHTML
             document.getElementById('connectButton').addEventListener('click', () => this.connectWallet());
-            document.getElementById('forceBatchButton').addEventListener('click', () => this.handleForceBatchAction());
+            document.getElementById('forceBatchButton').addEventListener('click', () => this.handleForceBatchButton());
             this.connectBtn = document.getElementById('connectButton');
             this.forceBatchBtn = document.getElementById('forceBatchButton');
         }
