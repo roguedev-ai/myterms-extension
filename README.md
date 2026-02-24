@@ -54,6 +54,7 @@ cd myterms-extension
 ## Documentation
 
 *   **[QUICKSTART.md](QUICKSTART.md)**: Installation, Wallet Setup, and First Run.
+*   **[ALPHA_RELEASE_NOTES.md](ALPHA_RELEASE_NOTES.md)**: Latest bug fixes and patch notes for the alpha build.
 *   **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**: Common issues (Localhost bridge, CMP detection failures).
 *   **[TECHNICAL_SPEC.md](TECHNICAL_SPEC.md)**: Deep dive into the Hybrid Architecture, Adapters, and Proverb Engine.
 *   **[EXECUTIVE_BRIEF.md](EXECUTIVE_BRIEF.md)**: High-level summary for stakeholders.
