@@ -68,7 +68,16 @@ class ConsentStorage {
 
   async waitForDB() {
     if (this.db) return this.db;
-    return this.initPromise;
+
+    try {
+      await this.initPromise;
+      return this.db;
+    } catch (error) {
+      console.warn('Initial DB init promise rejected, retrying...', error);
+      // Retry once if the first attempt failed (e.g., due to temporary quota issue)
+      this.initPromise = this.initDB();
+      return this.initPromise;
+    }
   }
 
   // Add consent to queue
@@ -301,6 +310,7 @@ class ConsentStorage {
               const updateRequest = store.put(consent);
               updateRequest.onsuccess = () => processNext(index + 1);
               updateRequest.onerror = (event) => {
+                event.preventDefault(); // Prevent transaction abort
                 console.error('Error updating consent:', event.target.error);
                 processNext(index + 1); // continue despite error
               };
@@ -310,6 +320,7 @@ class ConsentStorage {
           };
 
           request.onerror = (event) => {
+            event.preventDefault(); // Prevent transaction abort
             console.error('Error getting consent for update:', event.target.error);
             processNext(index + 1);
           };

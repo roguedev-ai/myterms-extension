@@ -219,6 +219,7 @@ class MyTermsEthers {
     } catch (error) {
       console.error('Failed to load remote config:', error);
       // Fallback to default values
+      this.contractAddress = null;
       this.contractABI = [];
     }
   }
@@ -233,7 +234,7 @@ class MyTermsEthers {
       return null;
     }
 
-    if (!this.contractAddress || !this.contractABI) {
+    if (!this.contractAddress || !this.contractABI || this.contractABI.length === 0) {
       console.warn('Cannot initialize contract: missing configuration');
       return null;
     }
