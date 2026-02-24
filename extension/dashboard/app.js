@@ -250,9 +250,6 @@ class DashboardApp {
             this.initElements();
             this.attachEventListeners();
 
-            // Load preferences first to determine if we should connect
-            await this.loadPreferences();
-
             // Check if we're in extension context (chrome-extension://)
             const isExtensionContext = window.location.protocol === 'chrome-extension:';
 
@@ -260,9 +257,18 @@ class DashboardApp {
                 // Hide wallet-dependent features in extension context
                 this.disableWalletFeatures();
             } else {
-                // Always setup listeners so manual connection updates UI
+                // Register wallet listener BEFORE loadPreferences() so we never
+                // miss the onWalletChange event during the bridge setup delay.
+                // Previously setupWalletListeners() was called after loadPreferences()
+                // which takes 5+ seconds to timeout — the wallet connected and fired
+                // its change event with no listener registered, so it was lost forever.
                 this.setupWalletListeners();
+            }
 
+            // Load preferences (may take up to 5s on first attempt in bridge mode)
+            await this.loadPreferences();
+
+            if (!isExtensionContext) {
                 // Only auto-connect if enabled in preferences
                 if (this.prefs.blockchainEnabled.checked) {
                     this.checkWalletConnection();

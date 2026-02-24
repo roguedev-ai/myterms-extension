@@ -120,13 +120,11 @@ class MyTermsEthers {
   // Load configuration from remote source
   async loadRemoteConfig() {
     try {
-      // Get current network from connected wallet
-      const wallet = this.getConnectedWallet();
-      let network = 'sepolia'; // Default
-
-      if (wallet && wallet.network) {
-        network = wallet.network.name;
-      }
+      // Use getNetworkName() which maps chain IDs correctly (e.g. 31337 → 'localhost').
+      // wallet.network.name cannot be used here because ethers.js v6 returns 'unknown'
+      // for non-standard chains like Hardhat (31337), causing the unsupported-network
+      // guard to fire even when the wallet is correctly on localhost.
+      const network = await this.getNetworkName();
 
       const networks = {
         'sepolia': {
