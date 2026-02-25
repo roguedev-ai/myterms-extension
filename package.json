@@ -3,10 +3,14 @@
     "version": "0.1.0",
     "description": "MyTerms Browser Plugin + Consent Ledger",
     "scripts": {
-        "test": "npx hardhat test",
+        "dev": "node scripts/dev-start.js",
+        "dev:fund": "npx hardhat run scripts/fund-wallet.js --network localhost",
+        "dev:chain": "npx hardhat node",
+        "dev:deploy": "npx hardhat run scripts/deploy.js --network localhost",
+        "dashboard": "node serve-dashboard.js",
         "compile": "npx hardhat compile",
         "deploy": "npx hardhat run scripts/deploy.js",
-        "dashboard": "node serve-dashboard.js"
+        "test": "npx hardhat test"
     },
     "devDependencies": {
         "@nomicfoundation/hardhat-toolbox": "^4.0.0",
