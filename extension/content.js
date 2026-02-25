@@ -87,10 +87,17 @@ class EnhancedConsentChainDetector {
 
   async loadRules() {
     const syncService = new RuleSyncService();
-    // Cache check/fetch logic is inside the service
-    // For content script, we usually just read what BG has synced
-    // But syncService.getLocalRules() reads from storage.local which is accessible here.
-    return await syncService.getLocalRules();
+    let rules = await syncService.getLocalRules();
+
+    // On a fresh install the background has never called syncRules(), so storage
+    // is empty. Fall back to the bundled default-rules.json immediately so the
+    // content script always has rules available without waiting for a sync.
+    if (rules.length === 0) {
+      await syncService.syncRules(); // loads remote; falls back to default-rules.json
+      rules = await syncService.getLocalRules();
+    }
+
+    return rules;
   }
 
   setupMessageListener() {
@@ -332,6 +339,12 @@ class EnhancedConsentChainDetector {
       const className = (typeof element.className === 'string' ? element.className : element.className?.baseVal || '').toLowerCase();
       const id = element.id?.toLowerCase() || '';
       const tagName = element.tagName?.toLowerCase() || '';
+
+      // Exclude non-visual/non-interactive elements — their textContent is code or
+      // metadata, not user-visible text. A <style> tag containing Cookiebot CSS has
+      // cookie/consent keywords in selector names but is never a banner.
+      const nonVisualTags = ['script', 'style', 'link', 'meta', 'head', 'noscript', 'template', 'title'];
+      if (nonVisualTags.includes(tagName)) return false;
 
       // Dimensions check
       const rect = element.getBoundingClientRect();
