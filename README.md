@@ -1,89 +1,133 @@
-# ConsentChain (Alpha)
+# MyTerms — Privacy Consent Ledger
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Version](https://img.shields.io/badge/version-v2.0--alpha.1-orange.svg)
-![Status](https://img.shields.io/badge/status-active-success.svg)
+![Version](https://img.shields.io/badge/version-v2.0--delta-blue.svg)
+![Status](https://img.shields.io/badge/status-feature--frozen-brightgreen.svg)
+![Branch](https://img.shields.io/badge/branch-delta-purple.svg)
 
 **Your Privacy, On-Chain.**
 
-ConsentChain (formerly MyTerms) is a Web3-powered browser extension that automates your cookie consent preferences and secures your choices on the blockchain.
+MyTerms (ConsentChain) is a Manifest V3 Chrome extension that automatically detects cookie consent banners, applies your preferences, records every decision with a cryptographic hash, and commits consent proofs to the Ethereum blockchain.
 
-> **Current Release**: `v2.0-alpha.1` (Branch: `alpha`)
-> **Core Features**: Hybrid Detection (Consent-O-Matic + Heuristics), Zcash Inscriptions (Mock), Ethereum Registry (Sepolia).
-
-## 🚀 Key Features
-
-*   **🛡️ Automated Protection**: Instantly detects and handles 200+ CMP types (OneTrust, Quantcast, Cookiebot, etc.).
-*   **🍪 Cookie Monster**: Visualize and delete tracking cookies directly from the dashboard.
-*   **🔗 Blockchain Verified**: Inscribes a privacy "Proverb" to Zcash (Shielded) and registers the commitment on Ethereum.
-*   **📊 Transparency Dashboard**: Track every consent decision with cryptographic proof.
+> **Current Branch**: `delta` (feature-frozen, stable)
+> **Ethereum**: Sepolia testnet + Hardhat localhost
+> **Dual-Chain (Zcash)**: Architecture complete, implementation planned for next release
 
 ---
 
-## Key Features
+## What It Does
 
-| Feature | Description |
-| :--- | :--- |
-| **Hybrid Detection Engine** | Combines **Consent-O-Matic** rules (200+ sites) with custom semantic heuristics for maximum coverage. |
-| **Privacy Proverbs** | Generates a hash (`SHA-256`) of your specific policy preferences (e.g., "Analytics: NO", "Functional: YES"). |
-| **Dual-Chain Storage** | **Public**: Ethereum/Sepolia for immutable policy anchoring.<br>**Private**: Zcash shielded transactions for user anonymity. |
-| **Cookie Monster** | Scans your browser for tracking cookies and deletes them if they mismatch your defined policy. |
-| **Dashboard** | A clean, local interface to view your consent timeline, manage keys, and verify blockchain proofs. |
+| Feature | Status | Description |
+|---|---|---|
+| **Hybrid CMP Detection** | ✅ Working | Consent-O-Matic rules (200+ CMPs) + heuristic fallback |
+| **Automated Banner Handling** | ✅ Working | Applies your Accept/Decline preference automatically |
+| **Consent Timeline** | ✅ Working | Every decision stored in IndexedDB with hash + timestamp |
+| **Agreement Capture** | ✅ Working | Full banner text stored and viewable in dashboard |
+| **Cookie Monster** | ✅ Working | Scan, classify, and delete tracking cookies |
+| **Blockchain Batch** | ✅ Working | Submit consent proofs to Ethereum via MetaMask |
+| **Privacy Dashboard** | ✅ Working | Timeline, sites, analytics, agreements, cookie analysis |
+| **Proverb Engine** | ✅ Architecture | SHA-256 consent proofs + Zcash memo format (Zcash layer is stubbed) |
+| **Dual-Chain (Zcash)** | 🔜 Planned | Full Zcash shielded inscription — next release |
 
 ---
 
-## 🚀 Getting Started
+## Quick Start
 
-We have simplified the setup process. Please refer to our **[QUICKSTART.md](QUICKSTART.md)** for a step-by-step guide.
+**Prerequisites**: Node.js 18+, Chrome, MetaMask extension, Git
 
-### Quick Command Line Setup
 ```bash
-# 1. Clone the repo
+# 1. Clone and install
 git clone https://github.com/roguedev-ai/myterms-extension.git
 cd myterms-extension
+git checkout delta
+npm install
 
-# 2. Setup dependencies (includes rule sync)
-./setup.sh
+# 2. Start full dev environment (chain + contract deploy + dashboard)
+npm run dev
 
-# 3. Start local development environment
-./dev-start.sh
+# 3. Load extension in Chrome
+# chrome://extensions → Developer mode → Load unpacked → select extension/
 ```
+
+Then open **http://localhost:8080** and connect MetaMask to **Localhost 8545** (Chain ID 31337).
+
+Full instructions → **[QUICKSTART.md](QUICKSTART.md)**
 
 ---
 
 ## Documentation
 
-*   **[QUICKSTART.md](QUICKSTART.md)**: Installation, Wallet Setup, and First Run.
-*   **[ALPHA_RELEASE_NOTES.md](ALPHA_RELEASE_NOTES.md)**: Latest bug fixes and patch notes for the alpha build.
-*   **[TROUBLESHOOTING.md](TROUBLESHOOTING.md)**: Common issues (Localhost bridge, CMP detection failures).
-*   **[TECHNICAL_SPEC.md](TECHNICAL_SPEC.md)**: Deep dive into the Hybrid Architecture, Adapters, and Proverb Engine.
-*   **[EXECUTIVE_BRIEF.md](EXECUTIVE_BRIEF.md)**: High-level summary for stakeholders.
+| File | What It Covers |
+|---|---|
+| [QUICKSTART.md](QUICKSTART.md) | Step-by-step setup on a new machine |
+| [TESTING_WORKFLOW.md](TESTING_WORKFLOW.md) | Test scenarios, expected console output, troubleshooting |
+| [LOCAL_BLOCKCHAIN.md](LOCAL_BLOCKCHAIN.md) | Hardhat node, contract deploy, MetaMask config |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System design and component map |
+| [TECHNICAL_SPEC.md](TECHNICAL_SPEC.md) | Detection engine, proverb system, cookie classifier |
+| [ROADMAP.md](ROADMAP.md) | Dual-chain implementation plan, cookie database upgrade |
+| [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Known issues and fixes |
+| [DEVELOPMENT.md](DEVELOPMENT.md) | Contributing, project structure, branch strategy |
 
 ---
 
-## Architecture: The V2 Hybrid Engine
+## Architecture Overview
 
-ConsentChain V2 uses a layered approach to handling banners:
-
-1.  **Rule-Based Detection (Fast)**: Checks the site against a local cache of ~200 known CMP rules (synced from Consent-O-Matic). If a match is found (e.g., OneTrust), it uses the specific rule to extract policy data and execute the decision.
-2.  **Heuristic Fallback (Smart)**: If no rule matches, the legacy `EnhancedBannerDetector` scans the DOM for common patterns (buttons labeled "Technically Necessary", "Reject All", etc.) and attempts to negotiate.
-
-### System Components
-*   **Extension**: Manifest V3, Content Scripts, Background Worker.
-*   **Smart Contract**: `MyTermsConsentLedger.sol` (Batch logging).
-*   **Dashboard**: Local web app for analytics and control.
+```
+Browser Tab
+    │
+    ▼
+content.js ──────────────────────────────────────────────►  IndexedDB
+(Consent-O-Matic + heuristic detection)                     (consent queue
+    │                                                         agreement text)
+    │ chrome.runtime.sendMessage(CONSENT_CAPTURED)                │
+    ▼                                                             │
+background.js ◄──────────────────────────────────────────────────┘
+(routing, storage, batch management)
+    │
+    │ window.postMessage bridge
+    ▼
+Dashboard (localhost:8080)
+    │
+    ├── ethers.js + MetaMask
+    │       │
+    │       ▼
+    │   MyTermsConsentLedger.sol
+    │   (Ethereum / Hardhat / Sepolia)
+    │
+    └── ProverbEngine + DualChainManager
+            │
+            ▼
+        Zcash (stubbed — planned)
+```
 
 ---
 
-## Contributing
+## NPM Scripts
 
-We welcome contributions! Specifically:
-*   **New CMP Rules**: Add support for more banner types via the `extension/lib/rules` directory.
-*   **Core Logic**: Improvements to the Proverb Engine or Chain Adapters.
+| Command | What it does |
+|---|---|
+| `npm run dev` | **Start everything** — Hardhat node + deploy + dashboard |
+| `npm run dev:chain` | Hardhat node only |
+| `npm run dev:deploy` | Deploy contract to running node |
+| `npm run dev:fund` | Fund a wallet (set `RECIPIENT=0x...`) |
+| `npm run dashboard` | Dashboard server only (port 8080) |
+| `npm run compile` | Compile Solidity |
+| `npm run test` | Run contract tests |
 
-See **[CONTRIBUTING.md](CONTRIBUTING.md)** for details.
+---
+
+## Branch Strategy
+
+| Branch | Purpose |
+|---|---|
+| `main` | Last stable release |
+| `alpha` | Alpha testing (v2.0-alpha.1) |
+| `Beta` | Beta stabilization |
+| `delta` | **Current — feature-frozen, documented** |
+| `feature/*` | Individual feature development |
 
 ---
 
 ## License
+
 MIT

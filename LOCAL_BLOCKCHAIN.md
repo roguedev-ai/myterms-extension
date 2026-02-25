@@ -1,326 +1,183 @@
-# Local Blockchain Development Guide
+# Local Blockchain Guide
 
-## 🏠 Overview
-
-This guide covers setting up and using a **local Hardhat blockchain** for development and testing of the MyTerms extension.
+Reference for running the Hardhat development blockchain and the MyTermsConsentLedger smart contract.
 
 ---
 
-## 🚀 Quick Start (Automated)
+## Quick Reference
 
-### Option 1: One-Command Setup
-```bash
-./dev-start.sh
-```
+| Item | Value |
+|---|---|
+| RPC URL | `http://127.0.0.1:8545` |
+| Chain ID | `31337` |
+| Dashboard | `http://localhost:8080` |
+| Contract | `0x5FbDB2315678afecb367f032d93F642f64180aa3` |
+| Deployer (Account #0) | `0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266` |
+| Account #0 Private Key | `0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80` |
 
-This script automatically:
-1. ✅ Starts Hardhat local node
-2. ✅ Deploys the MyTerms contract
-3. ✅ Starts dashboard server on port 8000
-
-### Option 2: Manual Setup (Full Control)
-See the manual setup section below.
+> All Hardhat accounts are publicly known test accounts. Never use on mainnet.
 
 ---
 
-## 📋 Prerequisites
+## Option 1 — One Command (Recommended)
 
-Make sure you have:
-- Node.js (v16+)
-- npm or yarn
-- MetaMask browser extension
+```bash
+npm run dev
+```
+
+Starts Hardhat node → deploys contract → starts dashboard. Waits for the READY banner before returning.
+
+To also fund a specific wallet address:
+
+```bash
+npm run dev -- --fund 0xYourMetaMaskAddress
+```
 
 ---
 
-## 🔧 Manual Setup Steps
+## Option 2 — Manual (Three Terminals)
 
-### 1. Install Dependencies
+### Terminal 1 — Start the Chain
+
 ```bash
-npm install
+npm run dev:chain
+# or: npx hardhat node
 ```
 
-### 2. Start Local Blockchain
+Leave running. Output shows 20 pre-funded test accounts.
+
+### Terminal 2 — Deploy the Contract
+
 ```bash
-npx hardhat node
+npm run dev:deploy
+# or: npx hardhat run scripts/deploy.js --network localhost
 ```
 
-**What this does:**
-- Starts a local Ethereum blockchain on `http://127.0.0.1:8545`
-- Creates 20 test accounts with 10,000 ETH each
-- Displays account addresses and private keys
-- Chain ID: `31337`
-
-**Keep this terminal open!** The node must stay running.
-
-### 3. Deploy Contract (New Terminal)
-```bash
-npx hardhat run scripts/deploy.js --network localhost
+Expected output:
+```
+Deploying MyTermsConsentLedger contract...
+MyTermsConsentLedger deployed to: 0x5FbDB2315678afecb367f032d93F642f64180aa3
 ```
 
-**Output will show:**
-```
-Deploying MyTermsConsentLedger...
-Contract deployed to: 0x5FbDB2315678afecb367f032d93F642f64180aa3
-```
+The contract always deploys to `0x5FbDB2315678afecb367f032d93F642f64180aa3` on a fresh Hardhat node because address derivation is deterministic. The address is hardcoded in `extension/utils/ethers.js` for localhost.
 
-**⚠️ Important:** Save this contract address!
+### Terminal 3 — Start the Dashboard
 
-### 4. Update Extension Configuration
-
-Edit `extension/utils/ethers.js`:
-```javascript
-'localhost': {
-  address: '0x5FbDB2315678afecb367f032d93F642f64180aa3', // ← Your deployed address
-  abi: [...]
-}
-```
-
-### 5. Connect MetaMask to Localhost
-
-**Add Network in MetaMask:**
-1. Open MetaMask
-2. Click network dropdown → "Add Network"
-3. Click "Add network manually"
-4. Fill in:
-   - **Network Name:** `Localhost 8545`
-   - **RPC URL:** `http://127.0.0.1:8545`
-   - **Chain ID:** `31337`
-   - **Currency Symbol:** `ETH`
-5. Click "Save"
-
-**Import Test Account:**
-1. Copy a private key from Hardhat node output
-2. MetaMask → Import Account
-3. Paste private key
-4. You now have 10,000 ETH for testing!
-
-### 6. Start Dashboard Server
 ```bash
 npm run dashboard
+# or: node serve-dashboard.js
 ```
 
-Dashboard now available at: **http://localhost:8080**
+Dashboard available at `http://localhost:8080`.
 
 ---
 
-## 💰 Funding User Accounts
-
-If you need to fund a specific wallet address:
+## Funding a Test Wallet
 
 ```bash
-npx hardhat run scripts/fund-user.js --network localhost
+RECIPIENT=0xYourAddress npm run dev:fund
 ```
 
-**To customize the recipient:**
-
-Edit `scripts/fund-user.js`:
-```javascript
-const recipientAddress = "0xYourWalletAddress";  // ← Change this
-const amountStr = "1000.0";  // Amount in ETH
-```
-
-Then run:
-```bash
-npx hardhat run scripts/fund-user.js --network localhost
-```
+The script sends 10 ETH from Hardhat Account #1. If the balance is already over 100 ETH, the transfer is skipped.
 
 ---
 
-## 🧪 Testing Workflow
+## MetaMask Setup
 
-### Complete Development Cycle
+### Add Localhost Network (one-time)
 
-1. **Start local blockchain:**
-   ```bash
-   npx hardhat node
-   ```
+```
+MetaMask → Settings → Networks → Add a network manually
 
-2. **Deploy contract:**
-   ```bash
-   npx hardhat run scripts/deploy.js --network localhost
-   ```
+Network Name : Localhost 8545
+RPC URL      : http://127.0.0.1:8545
+Chain ID     : 31337
+Currency symbol: ETH
+```
 
-3. **Update extension config** (see step 4 above)
+### If MetaMask Shows Stale Balance or -32002 Error
 
-4. **Load extension in Chrome:**
-   - `chrome://extensions`
-   - Load unpacked → `extension/` folder
+After restarting Hardhat (which resets the chain), MetaMask caches stale nonce and RPC state from the previous session. Fix:
 
-5. **Start dashboard server:**
-   ```bash
-   npm run dashboard
-   ```
-
-6. **Open dashboard:**
-   - Go to `http://localhost:8080`
-   - Connect MetaMask (should auto-detect Localhost network)
-
-7. **Test the flow:**
-   - Browse websites with cookie banners
-   - Check popup for queued consents
-   - Go to dashboard → Enable blockchain in preferences
-   - Click "Force Batch" to submit to blockchain
-   - View transaction on dashboard
+1. Switch MetaMask to a different network (e.g. Sepolia)
+2. Switch back to Localhost 8545
+3. If still broken: **MetaMask → Settings → Advanced → Reset Account**
+   - This clears cached nonce and RPC history. It does NOT delete your wallet or keys.
 
 ---
 
-## 🛠️ Available Scripts
+## Smart Contract Reference
 
-### Blockchain Scripts
+**Contract:** `MyTermsConsentLedger.sol`
+**Location:** `contracts/MyTermsConsentLedger.sol`
 
-```bash
-# Start local Hardhat node
-npx hardhat node
+### Functions
 
-# Deploy to localhost
-npx hardhat run scripts/deploy.js --network localhost
+```solidity
+// Log a single consent record
+function logConsent(string site, bytes32 termsHash) external
 
-# Deploy to Sepolia testnet
-npx hardhat run scripts/deploy.js --network sepolia
-
-# Run contract tests
-npm test
-
-# Compile contracts
-npm run compile
-
-# Fund a wallet on localhost
-npx hardhat run scripts/fund-user.js --network localhost
-
-# Verify contract on Etherscan (after testnet deployment)
-npx hardhat run scripts/verify-contract.js --network sepolia
+// Log a batch of consents in one transaction (gas-efficient)
+function logConsentBatch(string[] sites, bytes32[] hashes) external
 ```
 
-### Dashboard Scripts
+### Events
 
-```bash
-# Start dashboard server (port 8080)
-npm run dashboard
-
-# Alternative: Python server (port 8000) - deprecated
-python3 -m http.server 8000
+```solidity
+event ConsentLogged(
+    address indexed user,     // wallet address
+    string siteDomain,        // e.g. "example.com"
+    bytes32 termsHash,        // SHA-256 of banner content
+    uint256 timestamp         // block timestamp
+)
 ```
 
-### Development Scripts
+### What Goes On-Chain
+
+Only domain strings and SHA-256 hashes are written to the blockchain. No personal data, no banner text, no user identifiers beyond the wallet address.
+
+```
+logConsentBatch(
+    sites:  ["example.com", "news-site.com"],
+    hashes: ["0x13f244...",  "0xb26b39..."]
+)
+```
+
+The hash is a SHA-256 fingerprint of the banner text the user saw. Anyone can verify that a given banner matches the stored hash — the text stays in the user's browser, the proof goes on-chain.
+
+---
+
+## Sepolia Testnet
+
+The contract is also deployed on Sepolia:
+
+```
+Address: 0x0bF53DB13EDe40046a7232845571a93B1cceFF5f
+```
+
+To use Sepolia, switch MetaMask to the Sepolia network. The dashboard will detect the network and use the correct contract address automatically.
+
+You need Sepolia ETH from a faucet to submit transactions. Free faucets: `sepoliafaucet.com`, `alchemy.com/faucets/ethereum-sepolia`.
+
+---
+
+## Contract Tests
 
 ```bash
-# One-command dev environment
-./dev-start.sh
-
-# Initial setup (run once)
-./setup.sh
+npm run test
+# or: npx hardhat test
 ```
+
+Tests are in `test/`. They cover `logConsent` and `logConsentBatch` with event emission checks.
 
 ---
 
-## 🔍 Debugging
+## Re-deploying After Chain Reset
 
-### Check if Hardhat Node is Running
+Every time `npx hardhat node` starts fresh it resets to block 0. You must redeploy:
+
 ```bash
-curl -X POST -H "Content-Type: application/json" \
---data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}' \
-http://127.0.0.1:8545
+npm run dev:deploy
 ```
 
-Should return current block number.
-
-### Check Contract Deployment
-```bash
-npx hardhat console --network localhost
-```
-
-Then in console:
-```javascript
-const MyTerms = await ethers.getContractAt("MyTermsConsentLedger", "0x5FbDB..."); 
-// Your contract address
-await MyTerms.getAddress();
-```
-
-### Check Account Balance
-```bash
-npx hardhat run scripts/check-balance.js --network localhost
-```
-
----
-
-## 💡 Common Issues
-
-### Issue: "Cannot connect to localhost:8545"
-**Solution:** Make sure Hardhat node is running (`npx hardhat node`)
-
-### Issue: "Nonce too low" error
-**Solution:** 
-1. MetaMask → Settings → Advanced
-2. Click "Clear activity and nonce data"
-3. Reconnect to localhost network
-
-### Issue: Contract address changed
-**Solution:** 
-- Hardhat redeploys contract to same address if you restart
-- If it changes, update `extension/utils/ethers.js`
-
-### Issue: "Insufficient funds"
-**Solution:** 
-- Import a Hardhat test account (10,000 ETH)
-- Or use `scripts/fund-user.js`
-
----
-
-## 🌐 Network Comparison
-
-| Network | Purpose | Gas Costs | Speed | Persistence |
-|---------|---------|-----------|-------|-------------|
-| **Localhost** | Development | Free | Instant | Resets on restart |
-| **Sepolia** | Testing | Testnet ETH | ~30s | Permanent |
-| **Mainnet** | Production | Real ETH | ~15s | Permanent |
-
-**Recommendation:** Use Localhost for development, Sepolia for pre-production testing.
-
----
-
-## 📊 Local Blockchain Features
-
-### Hardhat Node Advantages:
-- ✅ Instant transactions (no mining wait)
-- ✅ Unlimited free ETH
-- ✅ Full control over network state
-- ✅ Easy to reset and restart
-- ✅ Detailed console logging
-- ✅ Built-in contract debugging
-
-### Hardhat Node Limitations:
-- ❌ Data lost on restart
-- ❌ Only accessible locally
-- ❌ Can't test real network conditions
-- ❌ No external contract interactions
-
----
-
-## 🎯 Best Practices
-
-1. **Always test locally first** before deploying to testnet
-2. **Use separate accounts** for testing vs. real usage
-3. **Keep Hardhat node running** during development session
-4. **Save contract addresses** after deployment
-5. **Update extension config** immediately after local deployment
-6. **Test on Sepolia** before mainnet deployment
-
----
-
-## 📚 Next Steps
-
-- [TESTING.md](./TESTING.md) - Comprehensive testing guide
-- [DEVELOPMENT.md](./DEVELOPMENT.md) - General development guide
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - System architecture overview
-- [Hardhat Docs](https://hardhat.org/hardhat-runner/docs/getting-started) - Official documentation
-
----
-
-## 🆘 Need Help?
-
-If you're stuck:
-1. Check the [Hardhat documentation](https://hardhat.org/docs)
-2. Review the error messages carefully
-3. Make sure all prerequisites are installed
-4. Try restarting the Hardhat node
-5. Check the browser console for errors
+The contract will again land at `0x5FbDB2315678afecb367f032d93F642f64180aa3` (deterministic).

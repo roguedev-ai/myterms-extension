@@ -1,95 +1,140 @@
 # Troubleshooting Guide
 
-### 3. CMP Detector Not Working
-**Symptoms:** No banners are detected, or "Rules not loaded" warning in console.
-**Cause:**
-*   Network firewall blocking access to GitHub (Rule Source).
-*   Missing `default-rules.json` fallback.
-**Solution:**
-*   ConsentChain V2.1 includes a **Bundled Fallback** mechanism. If the network sync fails, it automatically loads local rules.
-*   Verify `extension/default-rules.json` exists.
-*   Check console for "Fallback success: Synced default rules". & Fixes
+---
 
-### 1. "Localhost Bridge connection failed" / Dashboard not loading data
-**Symptoms:**
-*   The Dashboard (`http://localhost:3000`) loads but shows "0 Consents" or loading spinners forever.
-*   Console error: `Request timed out` or `Message port closed`.
+## MetaMask / Blockchain Issues
 
-**Causes:**
-*   The extension is not permitted to communicate with the local dashboard page.
-*   The extension background script is inactive.
+### "Can't connect to localhost" or `-32002` RPC Error
 
-**Fixes:**
-1.  **Reload the Extension**: Go to `chrome://extensions`, find ConsentChain, and click the refresh icon.
-2.  **Reload the Dashboard**: Refresh the localhost page *after* reloading the extension.
-3.  **Check Protocol**: Ensure you are using `http://localhost:3000`, NOT `file:///.../index.html`. The bridge requires HTTP/HTTPS.
+**Cause:** Hardhat node is not running, or MetaMask is rate-limited after repeated failed calls to a stopped node.
+
+**Fix:**
+1. Start the chain: `npm run dev` (or `npm run dev:chain`)
+2. In MetaMask: switch to Sepolia → switch back to **Localhost 8545**
+3. If still failing: MetaMask → Settings → Advanced → **Reset Account**
+   (Clears cached nonce and RPC state. Does not delete your wallet.)
 
 ---
 
-### 2. "CMP Not Detected" (Banner stays visible)
-**Symptoms:**
-*   You visit a site (e.g., `example.com`) and the cookie banner remains.
+### "Wallet not connected or contract not initialized"
 
-**Fixes:**
-1.  **Check Rules**: We support 200+ CMPs. If the site uses a custom banner, it might not be in our rule list.
-2.  **Legacy Fallback**: Wait 3-5 seconds. Our heuristic detector runs after the main rule engine.
-3.  **Inspect**: Open Developer Tools (`F12`) -> Console. Look for `[ConsentChain]` logs.
-    *   If you see "No CMP matched", please submit an issue with the URL.
+**Cause:** The dashboard loaded before MetaMask connected, and the wallet-change event was missed.
+
+**Fix:** Disconnect and reconnect in MetaMask (click the account → disconnect from localhost:8080 → reconnect).
 
 ---
 
-### ConsentChain Troubleshooting Guide (Alpha)
+### "Network unknown is not supported"
 
-Common issues and solutions for the ConsentChain v2.0-alpha.1 release.
+**Cause:** MetaMask is on the wrong network.
 
-## General Issues
-
-### 1. Extension Not Loading
-- **Symptom**: "Error loading extension" in `chrome://extensions`.
-- **Fix**: Run `./dev-start.sh` to ensure all dependencies are copied to the `extension/` folder.
-
-### 2. Dashboard Shows "No Data"
-- **Symptom**: Timeline is empty despite visiting sites.
-- **Fix**:
-    -   Ensure you are visiting a site with a supported CMP (e.g., `stackoverflow.com`).
-    -   Check the console for "ConsentChain: CMP Detected".
-    -   Reload the extension.
-
-### 3. Zcash Wallet Not Connecting
-- **Symptom**: "Zcash Wallet not found" warning.
-- **Note**: In Alpha, Zcash integration is **mocked**. You do not need a real Zwall wallet. The extension simulates the inscription process for demonstration purposes.
-
-### 4. Bridge Connection Failed (Localhost)
-- **Symptom**: "Request timed out" on the localhost dashboard.
-- **Fix**: Ensure the extension is installed and enabled. The dashboard communicates with the extension via `window.postMessage`.
+**Fix:** Switch MetaMask to **Localhost 8545** (Chain ID 31337) or **Sepolia** (Chain ID 11155111).
 
 ---
 
-### 3. "Wallet not connected" / "User denied transaction"
-**Symptoms:**
-*   Clicking "Force Batch" does nothing or fails immediately.
+### "Insufficient funds for transaction"
 
-**Fixes:**
-1.  **Unlock MetaMask**: Ensure your wallet extension is unlocked.
-2.  **Network**: Ensure MetaMask is connected to **Localhost 8545** (or Sepolia if configured), NOT Mainnet.
-3.  **Reset Account**: If using Localhost, sometimes nonces get out of sync. In MetaMask: Settings -> Advanced -> Clear Activity Tab Data.
+**Cause:** Your MetaMask wallet has no ETH on the local chain. The chain resets every time `npm run dev` starts.
 
----
+**Fix:**
+```bash
+RECIPIENT=0xYourAddress npm run dev:fund
+```
 
-### 4. "Service Worker Inactive"
-**Symptoms:**
-*   Extension icon is gray or unresponsive.
-
-**Fixes:**
-1.  This is normal logic for Chrome Manifest V3; it puts workers to sleep.
-2.  Clicking the extension icon wakes it up.
-3.  If it persists, check `chrome://extensions` for errors.
+Or import the pre-funded Hardhat account (10,000 ETH):
+```
+Private key: 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
+```
 
 ---
 
-## Debugging Mode
+### Force Batch fails with `DataCloneError`
 
-To see verbose logs:
-1.  Open `extension/content.js`.
-2.  Ensure `console.log` statements are not commented out (V2.0 has verbose logging enabled by default).
-3.  Filter Console by `MyTerms` or `ConsentChain`.
+**Cause:** Old bug — `receipt.confirmations` in ethers.js v6 is a function, not a value. Fixed in `delta`.
+
+**Fix:** Ensure you are on the `delta` branch: `git checkout delta`
+
+---
+
+### Transaction rejected — MetaMask popup appeared but I dismissed it
+
+**Cause:** Expected. You rejected the transaction.
+
+**Fix:** Click Force Batch again and confirm in MetaMask.
+
+---
+
+## Extension Issues
+
+### "Loaded 0 CMP rules for detection"
+
+**Cause:** On a fresh install, `chrome.storage.local` has no cached rules because the background has not yet run a sync. Fixed in `delta` — content script now bootstraps rules from `default-rules.json` on first load.
+
+**Fix:** Ensure you are on `delta`. If still happening, check the extension service worker console for import errors.
+
+---
+
+### Extension detects a `<style>` tag as a cookie banner
+
+**Cause:** Old heuristic bug — Cookiebot's injected `<style>` tag contains cookie-related CSS class names that scored above the detection threshold. Fixed in `delta`.
+
+**Fix:** Ensure you are on `delta`.
+
+---
+
+### Dashboard shows "No Consents Found" after chain restart
+
+**Cause:** The Hardhat chain was restarted (block 0 = no transaction history). The IndexedDB consent queue in the extension persists across chain restarts — only blockchain records reset.
+
+**Fix:** Browse a site with a cookie banner to capture new consents, then click Force Batch.
+
+---
+
+### Timeline items are missing
+
+**Fix:** Visit a site with an active cookie banner (e.g. any EU news site, stackoverflow.com). The extension only records consents after a banner is detected and interacted with.
+
+---
+
+## Dashboard Issues
+
+### Wallet section shows "Blockchain features disabled"
+
+**Cause:** The "Blockchain Recording" preference is off.
+
+**Fix:** Dashboard → ⚙️ Preferences → enable **Blockchain Recording** → Save Preferences.
+
+---
+
+### Cookie scan shows mostly "Unknown" cookies
+
+**Cause:** The current classifier uses ~30 regex patterns — cookies from less common platforms fall through.
+
+**Planned fix:** The next release integrates the Open Cookie Database (826 named entries, Apache 2.0 license) as a bundled lookup table with weekly background updates. See [ROADMAP.md](ROADMAP.md).
+
+---
+
+### Charts not rendering
+
+**Cause:** Dashboard opened before `npm run dev` finished starting.
+
+**Fix:** Reload the browser tab after the READY banner appears in the terminal.
+
+---
+
+## Extension Not Loading
+
+### Extension shows error badge in `chrome://extensions`
+
+1. Click **Errors** on the extension card
+2. Read the actual error text at the top (not the source listing — that's the linked file, not the error)
+3. Common causes: missing JS file, syntax error, bad import path
+
+Check the service worker console: `chrome://extensions` → MyTerms → Inspect worker → Console tab.
+
+---
+
+## Getting More Help
+
+- Open an issue: https://github.com/roguedev-ai/myterms-extension/issues
+- Full test workflow: [TESTING_WORKFLOW.md](TESTING_WORKFLOW.md)
