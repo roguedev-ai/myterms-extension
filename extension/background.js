@@ -317,7 +317,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // CONSENT_CAPTURED - from content script
   if (request.type === 'CONSENT_CAPTURED') {
     console.log('Received consent from content script:', request.consent.siteDomain);
-    consentStorage.addToQueue(request.consent).then(() => {
+    const consent = request.consent;
+    consentStorage.addToQueue(consent).then(() => {
+      // Persist agreement text if banner content was captured (deduplicates by termsHash)
+      if (consent.bannerContent && consent.termsHash) {
+        consentStorage.storeAgreement({
+          termsHash: consent.termsHash,
+          text: consent.bannerContent,
+          url: consent.url,
+          siteDomain: consent.siteDomain
+        });
+      }
       sendResponse({ success: true });
     }).catch((error) => {
       console.error('Failed to add consent to queue:', error);
