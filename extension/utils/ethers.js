@@ -348,7 +348,7 @@ class MyTermsEthers {
         hash: tx.hash,
         blockNumber: receipt.blockNumber,
         gasUsed: receipt.gasUsed.toString(),
-        confirmations: receipt.confirmations
+        confirmations: await receipt.confirmations()
       };
     } catch (error) {
       console.error('Failed to submit batch:', error);
@@ -383,7 +383,7 @@ class MyTermsEthers {
         hash: tx.hash,
         blockNumber: receipt.blockNumber,
         gasUsed: receipt.gasUsed.toString(),
-        confirmations: receipt.confirmations
+        confirmations: await receipt.confirmations()
       };
     } catch (error) {
       console.error('Failed to submit consent:', error);
